@@ -1,0 +1,56 @@
+{% extends "index.html" %}
+{% block welcome %}
+
+<h4> Welcome!</h4>
+
+<p>
+Morbi ut pharetra libero, non vulputate nibh. Aliquam vitae lacus id massa vehicula pulvinar. Nullam commodo sapien non diam ullamcorper laoreet. Proin cursus augue vitae erat dignissim malesuada. Nam nec convallis felis, eget dapibus felis. Etiam feugiat suscipit lorem vitae consequat. Vestibulum sed ligula cursus, dictum erat id, porta dui. Aliquam aliquet dignissim metus, ornare posuere nibh commodo eget. Pellentesque consectetur erat ligula, blandit cursus mauris ultrices a. Aliquam ante orci, ornare ac nisl quis, varius placerat dolor. Vestibulum sit amet turpis ornare, interdum turpis feugiat, aliquam leo. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Cras quis tempus diam, ac dapibus ipsum. Mauris eu quam ut turpis euismod commodo. Nulla commodo arcu lacus, sed egestas neque molestie ac.
+</p>
+
+<p>
+Morbi ut pharetra libero, non vulputate nibh. Aliquam vitae lacus id massa vehicula pulvinar. Nullam commodo sapien non diam ullamcorper laoreet. Proin cursus augue vitae erat dignissim malesuada. Nam nec convallis felis, eget dapibus felis. Etiam feugiat suscipit lorem vitae consequat. Vestibulum sed ligula cursus, dictum erat id, porta dui. Aliquam aliquet dignissim metus, ornare posuere nibh commodo eget. Pellentesque consectetur erat ligula, blandit cursus mauris ultrices a. Aliquam ante orci, ornare ac nisl quis, varius placerat dolor. Vestibulum sit amet turpis ornare, interdum turpis feugiat, aliquam leo. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Cras quis tempus diam, ac dapibus ipsum. Mauris eu quam ut turpis euismod commodo. Nulla commodo arcu lacus, sed egestas neque molestie ac.
+</p>
+
+
+<hr>
+
+
+
+{% if current_user.id %}
+
+<div id="UserPanel">
+<h5>User Panel</h5>
+    <p><a href="{{ url_for('upload') }}">Upload a new assignment</a></p>
+</div>
+<hr>
+{% endif %}
+
+
+
+{% if current_user.group == 'admin' %}
+<div id="AdminPanel">
+<h5>Admin Panel</h5>
+    <p><a href="{{ url_for('useradmin') }}">User Administration</a></p>
+    <p><a href="{{ url_for('projectadmin') }}">Project and Source Administration</a></p>
+    <p><a href="{{ url_for('langadmin') }}">Language Administration</a></p>
+</div>
+<hr>
+{% endif %}
+
+
+
+
+
+
+
+
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    {% for message in messages %}
+      {{ message }}
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+
+{% endblock %}

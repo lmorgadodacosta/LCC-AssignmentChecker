@@ -1,0 +1,74 @@
+<!doctype html>
+<head>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+  
+  <!-- JQUERY -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+
+  <!-- HTML-Kickstart -->
+  <script src="{{ url_for('static', filename='HTML-KickStart-master/js/kickstart.js') }}"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='HTML-KickStart-master/css/kickstart.css') }}" media="all" />
+
+  <!-- SweetAlert2 -->
+  <script src="{{ url_for('static', filename='sweetalert2/sweetalert2.min.js') }}"></script>
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='sweetalert2/sweetalert2.css') }}">
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/common.css') }}" />
+
+  <script type="text/javascript">
+    var $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+  </script>
+
+
+  <title>LCC-APP</title>
+</head>
+
+<body>
+
+<div id="container">
+   <div id="header">
+
+     <div id="headerL">
+       {% if current_user.id %}
+       Welcome to the LCC Assignment Checker, <b>{{current_user.id}}.</b>
+       {% else %}
+       Welcome to the LCC Assignment Checker, <b>use the link on the right to sign-in.</b>
+       {% endif %}  
+     </div>
+
+
+     <div id="headerR">
+       <a href="/" title="Login" title="Home"><i class="fa fa-home" aria-hidden="true"></i></a>&nbsp;
+       {% if not current_user.id %}
+         <a href="{{ url_for('login') }}" title="Sign-in"><i class="fa fa-user" aria-hidden="true"></i> Sign in </a>
+       {% else %}
+	 <a href="{{ url_for('logout') }}" style="color:FireBrick" title="Logout">
+	   <i class="fa fa-user-times" aria-hidden="true"></i></a>
+	{% endif %}
+     </div>
+
+
+   </div>
+   <div id="body">
+
+     {% block welcome %}{% endblock %}
+
+     {% block body %}{% endblock %}
+
+
+     <!-- <p><a href="omw">GO TO OMW</a></p> -->
+     <!-- <p><a href="ili">GO TO CILI</a></p> -->
+   </div>
+
+
+   <div id="footer">
+     <p>This is an experimental version of an interface to check assignments for <a href="http://lcc.soh.ntu.edu.sg/Pages/Home.aspx" target="_blank">LCC, NTU, Singapore</a>.
+       <br>Developed mainly by <a href='mailto:lmorgado.dacosta@gmail.com'>Luís Morgado da Costa</a>
+       <a href="https://github.com/lmorgadodacosta" target="_blank" style="text-decoration: none; color: black;"><i class="fa fa-github"></i></a>
+     </p>
+   </div>
+</div>
+
+</body>
