@@ -80,13 +80,13 @@ def logout():
 @app.before_request
 def before_request():
     g.admin = connect_admin()
-    g.omw = connect_omw()
+    # g.omw = connect_omw()
 
 @app.teardown_request
 def teardown_request(exception):
     if hasattr(g, 'db'):
         g.admin.close()
-        g.omw.close()
+        # g.omw.close()
 ################################################################################
 
 
