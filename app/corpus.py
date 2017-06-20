@@ -26,8 +26,8 @@ with app.app_context():
 
 
     def put_h1(html):
-        """This tags text marked as bold with h4 headers"""
-        return html.replace("<strong>", "<h4><strong>").replace("</strong>", "</strong></h4>")
+        """This tags text marked as bold with h5 headers"""
+        return html.replace("<strong>", "<h5><strong>").replace("</strong>", "</strong></h5>")
 
     def put_pid(html):
         """This includes pid in each paragraph """
@@ -205,7 +205,7 @@ with app.app_context():
         html = "".join(html_list)
         update_html_into_doc(docid, html)
 
-        return html
+        return html, docid
 
 
 
@@ -222,13 +222,76 @@ with app.app_context():
             html = put_h1(html)
             html = put_pid(html)
 
-            html = pid_sids2html(html, docname)
-
-
-            return html
+            html, docid = pid_sids2html(html, docname)
 
 
 
+            errors = check_doc(docid)
+
+
+            return errors + html
+
+
+
+
+
+    #############################
+    # CHECKS TO DOCUMENT
+    #############################
+
+    def check_doc(docid):
+        """Given a docid, it checks the document for multiple problems. 
+        It returns html reporting this."""
+        # FIXME, THIS SHOULD BE RETURNING JS/CSS code instead of HTML
+
+        html = "<h5>Diagnosis:</h5>"
+
+        sents = fetch_sents_by_docid(docid)
+        sid_min = min(sents.keys())
+        sid_max = max(sents.keys())
+
+        words = fetch_words_by_sid(sid_min, sid_max)
+
+
+        # CHECK FOR SENTENCE LENGTH
+        threshold = 35
+        change = False
+        for sid in words.keys():
+            if len(list(words[sid].keys())) >= threshold:
+                
+                # FIXME! this u"string" will not work on python3
+                change = True
+                html += u"""<p><b>Sentence:</b> <em>{}</em>
+                <br> The sentence above seems to be a bit long. 
+                You might want to consider splitting it into shorter sentences.
+                 </p>""".format(sents[sid][2])
+
+        if change: # Add a separator if something was added 
+            html += "<hr>"
+
+
+
+        # CHECK FOR PET PEEVES
+        informal_lang = ['hassle', 'Hassle', 'tackle', 'Tackle'] 
+        # LMC FIXME!, it seems that lemmatizer doesn't work well when it thinks it's a proper noun. 
+        # I added the capitalised forms by hand for now  
+        change = False
+        for sid in words.keys():
+            for wid in words[sid].keys():
+                if words[sid][wid][2] in informal_lang:
+                    change = True
+                    html += u"""<p><b>Sentence:</b> <em>{}</em><br>
+                    The sentence above seems to make use of informal 
+                    language. Please refrain from using the word 
+                    <b><em>{}</em></b>.</p>
+                    """.format(sents[sid][2], words[sid][wid][0])
+
+        if change: # Add a separator if something was added 
+            html += "<hr>"
+
+
+
+        return html
 
 
 
@@ -239,19 +302,35 @@ with app.app_context():
 
     def fetch_max_doc_id():
         for r in query_corpus("""SELECT MAX(docid) from doc"""):
-
             if r['MAX(docid)']:
                 return r['MAX(docid)']
             else:
                 return 0
 
+
     def fetch_max_sid():
         for r in query_corpus("""SELECT MAX(sid) from sent"""):
-
             if r['MAX(sid)']:
                 return r['MAX(sid)']
             else:
                 return 0
+
+
+    def fetch_sents_by_docid(docid):
+        sents = dd(lambda: dd())
+        for r in query_corpus("""SELECT sid, pid, sent from sent
+                                 WHERE docid = ?""", [docid]):    
+            sents[r['sid']]=[r['sid'], r['pid'],r['sent']]
+        return sents
+
+
+    def fetch_words_by_sid(sid_min, sid_max):
+        words = dd(lambda: dd())
+        for r in query_corpus("""SELECT sid, wid, word, pos, lemma from word
+                                 WHERE sid >= ? AND sid <= ?""", [sid_min, sid_max]):    
+            words[r['sid']][r['wid']]=[r['word'], r['pos'],r['lemma']]
+        return words
+
 
 
     def fetch_max_wid(sid):
@@ -261,7 +340,6 @@ with app.app_context():
                 return r['MAX(wid)']
             else:
                 return 0
-
 
 
     def insert_into_doc(docid, docname):
