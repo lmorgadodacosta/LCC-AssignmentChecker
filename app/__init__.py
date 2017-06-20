@@ -17,7 +17,8 @@ from lxml import etree
 
 
 from common_login import *
-# from common_sql import *
+from common_sql import *
+from corpus import *
 # from omw_sql import *
 from check import *
 
@@ -28,10 +29,6 @@ app = Flask(__name__)
 app.secret_key = "!$flhgSgngNO%$#SOET!$!"
 app.config["REMEMBER_COOKIE_DURATION"] = datetime.timedelta(minutes=30)
 
-## profiler
-#app.config['PROFILE'] = True
-#app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
-#app.run(debug = True)
 
 
 ################################################################################
@@ -80,12 +77,14 @@ def logout():
 @app.before_request
 def before_request():
     g.admin = connect_admin()
+    g.corpus = connect_corpus()
     # g.omw = connect_omw()
 
 @app.teardown_request
 def teardown_request(exception):
     if hasattr(g, 'db'):
         g.admin.close()
+        g.corpus.close()
         # g.omw.close()
 ################################################################################
 
@@ -262,11 +261,18 @@ def teardown_request(exception):
 def file2db():
 
     filename = request.args.get('fn', None)
+    r = docx2html(filename)
+
+
 #     vr, filename, wn, wn_dtls = validateFile(current_user.id, filename)
     
 #     return jsonify(result=render_template('validation-report.html',
 #                     vr=vr, wn=wn, wn_dtls=wn_dtls, filename=filename))
-    return jsonify(result=False)
+
+    # return jsonify(result=False)
+
+
+    return jsonify(result=r)
 
 
 

@@ -12,15 +12,21 @@ def qs(ll):
 app = Flask(__name__)
 with app.app_context():
 
+
     # ILIDB = 'db/ili.db'
     # OMWDB = 'db/omw.db'
     ADMINDB = 'db/admin.db'
+    CORPUSDB = 'db/corpus.db'
+
 
     ############################################################################
     # SET UP CONNECTIONS
     ############################################################################
     def connect_admin():
         return sqlite3.connect(ADMINDB)
+
+    def connect_corpus():
+        return sqlite3.connect(CORPUSDB)
 
     # def connect_ili():
     #     return sqlite3.connect(ILIDB)
@@ -33,6 +39,14 @@ with app.app_context():
         rv = [dict((cur.description[idx][0], value)
                    for idx, value in enumerate(row)) for row in cur.fetchall()]
         return (rv[0] if rv else None) if one else rv
+
+
+    def query_corpus(query, args=(), one=False):
+        cur = g.corpus.execute(query, args)
+        rv = [dict((cur.description[idx][0], value)
+                   for idx, value in enumerate(row)) for row in cur.fetchall()]
+        return (rv[0] if rv else None) if one else rv
+
 
     # def query_ili(query, args=(), one=False):
     #     cur = g.ili.execute(query, args)
@@ -58,6 +72,15 @@ with app.app_context():
         lastid = cur.lastrowid
         g.admin.commit()
         return lastid
+
+    def write_corpus(query, args=(), one=False):
+        cur = g.corpus.cursor()
+        cur.execute(query, args)
+        lastid = cur.lastrowid
+        g.corpus.commit()
+        return lastid
+
+
 
     # def write_ili(query, args=(), one=False):
     #     cur = g.ili.cursor()

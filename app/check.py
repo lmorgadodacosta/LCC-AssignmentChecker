@@ -16,7 +16,7 @@ import json # to print dd
 
 # ILI_DTD = 'db/WN-LMF.dtd'
 UPLOAD_FOLDER = 'public-uploads'
-ALLOWED_EXTENSIONS = set(['xml','gz','xml.gz','doc','tab'])
+ALLOWED_EXTENSIONS = set(['docx'])
 
 
 app = Flask(__name__)
