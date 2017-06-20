@@ -1,0 +1,24 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+
+# Sqlite, XML, Gzip
+*.db
+*.xml
+*.gz
+
+# Emacs related stuff
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+
+# Mac OS X hidden files
+.DS_Store
