@@ -1,0 +1,11 @@
+To be able to run this, you need a few dependencies:
+
+
+pip install nltk
+pip install mammoth
+pip install flask
+pip install https://pypi.python.org/packages/source/F/Flask-Login/Flask-Login-0.3.2.tar.gz
+
+
+# NOTE THERE IS A COMPATIBILITY ISSUE WITH Flask-Login 0.4; 
+# PLEASE INSTALL VERSION 0.3.2 WITH THE COMMAND SHOWN ABOVE
