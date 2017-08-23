@@ -10,7 +10,7 @@ from collections import defaultdict as dd
 from collections import OrderedDict as od
 from hashlib import md5
 from werkzeug import secure_filename
-from lxml import etree
+#from lxml import etree
 
 ## profiler
 #from werkzeug.contrib.profiler import ProfilerMiddleware

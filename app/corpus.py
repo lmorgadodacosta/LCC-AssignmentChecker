@@ -16,11 +16,17 @@ from nltk.stem import WordNetLemmatizer
 
 from common_sql import *
 
+import delphin
+from delphin.interfaces import ace
+
 
 UPLOAD_FOLDER = 'public-uploads'
+STATIC = 'static'
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['STATIC'] = STATIC
+
 
 with app.app_context():
 
@@ -155,8 +161,8 @@ with app.app_context():
 
                 sent = escape(sent)
                 matched_sent = ""
-                print(sent)
-                print(matching_string)
+                # print(sent)
+                # print(matching_string)
                 while len(sent) > 0:
                     if matching_string.startswith(sent):  # matching_string contains sent or they are the same
                         if len(matched_sent) == 0:  # whole the sentence matches
@@ -191,7 +197,7 @@ with app.app_context():
 
 
                     if len(matching_string) == 0:
-                        print(matched_string)
+                        # print(matched_string)
                         html_list[matching_position] = matched_string
                         if len(string_positions) == 0:
                             break
@@ -285,6 +291,25 @@ with app.app_context():
                     language. Please refrain from using the word 
                     <b><em>{}</em></b>.</p>
                     """.format(sents[sid][2], words[sid][wid][0])
+
+
+
+        # USE ACE TO CHECK PARSES FOR EACH SENTENCE
+        with ace.AceParser(os.path.join(app.config['STATIC'], "erg-1214-osx-0.9.25.dat"), executable=os.path.join(app.config['STATIC'], "ace"), cmdargs=['-1']) as parser:
+
+            for sid in sents.keys():
+                
+                parses = len(parser.interact(sents[sid][2])['RESULTS'])
+                print("sid:" + str(sid) + " - " + str(parses) + " parses.")
+                if parses == 0:
+                    change = True
+                    html += u"""<p><b>Sentence:</b> <em>{}</em><br>
+                    The sentence above seems to have some problem with its grammar.
+                    Consider breaking it into smaller sentences or, possibly, revise it.   
+                    </p>
+                    """.format(sents[sid][2])
+
+
 
         if change: # Add a separator if something was added 
             html += "<hr>"

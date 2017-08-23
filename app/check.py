@@ -14,6 +14,11 @@ from datetime import datetime as dt
 
 import json # to print dd
 
+import delphin
+from delphin.interfaces import ace
+
+
+
 # ILI_DTD = 'db/WN-LMF.dtd'
 UPLOAD_FOLDER = 'public-uploads'
 ALLOWED_EXTENSIONS = set(['docx'])
@@ -44,7 +49,7 @@ with app.app_context():
             file = None
             lic = None
 
-        print(lic)
+        # print(lic)
 
         if file and allowed_file(file.filename):
             filename = now + '_' +str(current_user) + '_' + 'lic' + lic + '_' + file.filename
