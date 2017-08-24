@@ -6,7 +6,7 @@ from flask import Flask, current_app
 from flask import render_template, g, request, redirect, url_for, send_from_directory, session, flash
 import urllib, gzip, requests
 from werkzeug import secure_filename
-from lxml import etree
+# from lxml import etree
 
 from common_sql import *
 # from omw_sql import *

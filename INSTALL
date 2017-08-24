@@ -1,14 +1,62 @@
-To be able to run this, you need a few dependencies:
+# THIS WEB APP WAS MADE TO RUN ON PYTHON3
+# To be able to run this, you need a few dependencies:
 
+################################################################################
+#     DEPENDENCIES
+################################################################################
+# You need to have a few dependencies installed beyond python3.
+# This tries to be an exhaustive of what you might need to run it. 
+################################################################################
 
-pip install nltk
-pip install mammoth
-pip install flask
-pip install https://pypi.python.org/packages/source/F/Flask-Login/Flask-Login-0.3.2.tar.gz
-
-
-You need to have installed PyDelphin and have both ACE and the ERG inside static\
-
-
+$ sudo pip3 install nltk
+$ sudo pip3 install mammoth
+$ sudo pip3 install flask
+$ sudo pip3 install https://pypi.python.org/packages/source/F/Flask-Login/Flask-Login-0.3.2.tar.gz
 # NOTE THERE IS A COMPATIBILITY ISSUE WITH Flask-Login 0.4; 
 # PLEASE INSTALL VERSION 0.3.2 WITH THE COMMAND SHOWN ABOVE
+
+$ sudo pip3 install pydelphin
+# You also need to have installed PyDelphin and have both ACE and the ERG inside static\
+
+
+
+
+################################################################################
+#     NLTK DEPENDENCIES
+################################################################################
+# You need to download the tokenizer from within NLTK.
+################################################################################
+
+$ python3
+>>> import nltk
+>>> nltk.download('punkt')
+>>> nltk.download('wordnet')
+>>> nltk.download('averaged_perceptron_tagger')
+
+################################################################################
+#     ACE and ERG
+################################################################################
+# Assuming you are under ubuntu, download and place both ACE and ERG binaries 
+# under /static. Move the ace binary from within its folder to /static.
+################################################################################
+
+$ wget http://sweaglesw.org/linguistics/ace/download/erg-1214-x86-64-0.9.25.dat.bz2
+$ bzip2 -d erg-1214-x86-64-0.9.25.dat.bz2
+$ mv erg-1214-x86-64-0.9.25.dat erg.dat
+$ wget http://sweaglesw.org/linguistics/ace/download/ace-0.9.25-x86-64.tar.gz
+$ tar -xvzf ace-0.9.25-x86-64.tar.gz
+
+
+
+# Run make-db-XXXX inside /bin
+# optionally add user user with:
+INSERT INTO users (userID, full_name, password, email, access_level, access_group, affiliation, u) VALUES ('user', 'TestUser', '46bcc2d7eb5723292133857fa95454b9', 'user@email.com', 0, 'admin', 'XXX', 'SYSTEM'); 
+
+
+
+
+
+################################################################################
+#   WSGI & APACHE2
+################################################################################
+

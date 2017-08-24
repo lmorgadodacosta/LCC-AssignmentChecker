@@ -295,7 +295,7 @@ with app.app_context():
 
 
         # USE ACE TO CHECK PARSES FOR EACH SENTENCE
-        with ace.AceParser(os.path.join(app.config['STATIC'], "erg-1214-osx-0.9.25.dat"), executable=os.path.join(app.config['STATIC'], "ace"), cmdargs=['-1']) as parser:
+        with ace.AceParser(os.path.join(app.config['STATIC'], "erg.dat"), executable=os.path.join(app.config['STATIC'], "ace"), cmdargs=['-1']) as parser:
 
             for sid in sents.keys():
                 
