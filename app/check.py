@@ -18,8 +18,6 @@ import delphin
 from delphin.interfaces import ace
 
 
-
-# ILI_DTD = 'db/WN-LMF.dtd'
 UPLOAD_FOLDER = 'public-uploads'
 ALLOWED_EXTENSIONS = set(['docx'])
 

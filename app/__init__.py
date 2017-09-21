@@ -4,7 +4,8 @@
 import os, sys, sqlite3, datetime, urllib, gzip, requests
 from time import sleep
 from flask import Flask, render_template, g, request, redirect, url_for, send_from_directory, session, flash, jsonify, make_response, Markup
-from flask_login import LoginManager, UserMixin, login_required, login_user, logout_user, current_user, wraps
+from flask_login import LoginManager, UserMixin, login_required, login_user, logout_user, current_user#, wraps
+from functools import wraps
 from itsdangerous import URLSafeTimedSerializer # for safe session cookies
 from collections import defaultdict as dd
 from collections import OrderedDict as od

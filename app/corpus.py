@@ -136,6 +136,7 @@ with app.app_context():
                 if html_list[position] == "</p>":
                     break
                 position += 1
+
             sents = tokenize.sent_tokenize(unescape(p_string))
             #    sid = 0
             matching_position = min(string_positions)
@@ -218,14 +219,32 @@ with app.app_context():
 
 
 
+    def convert_image(image):
+        """This should save the image into the UPLOAD_FOLDER. """
+        with image.open() as image_bytes:
+            # encoded_src = base64.b64encode(image_bytes.read()).decode("ascii")
+            # FOR NOW JUST PUT A PLACEHOLDER
+            encoded_src = "IMAGE PLACEHOLDER"
+        return {
+            # "src": "data:{0};base64,{1}".format(image.content_type, encoded_src)
+            "src": encoded_src
+        }
 
+    
     def docx2html(docname):
+        """ Convert an uploaded .docx document into HTML, and upload it into the database."""
+
 
         with open(os.path.join(app.config['UPLOAD_FOLDER'], docname), 'rb') as docx_file:
-            result = mammoth.convert_to_html(docx_file)
-            html = result.value
+            result = mammoth.convert_to_html(docx_file, convert_image=mammoth.images.img_element(convert_image))
+            print("MESSAGES: " + str(result.messages)) # print if anyting went wrong during convertion
 
-            html = put_h1(html)
+            html = result.value
+            print(html)
+
+            
+
+            html = put_h1(html)  #LMC:FIXME: This is bad, cause any word that is bold get's put into a new line, behaving as a title.
             html = put_pid(html)
 
             html, docid = pid_sids2html(html, docname)
