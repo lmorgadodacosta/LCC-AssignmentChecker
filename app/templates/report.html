@@ -23,56 +23,6 @@
 
   <div id="val2"> </div><br>
 
-
-
-<script>
-function uploadlmf() {
- 	swal({
- 	    title: 'Are you sure?',
- 	    text: "The upload of this wordnet cannot be reverted! Please wait after confirming. It may take a while to refresh the page.",
- 	    type: 'warning',
- 	    showCancelButton: true,
- 	    confirmButtonText: 'Yes, upload it!',
- 	    cancelButtonText: 'No, cancel!',
- 	    showLoaderOnConfirm: true,
- 	    buttonsStyling: false
- 	}).then(function() {
- 	    var valid = document.getElementById("validation_div");
- 	    valid.innerHTML = "<div style='text-align:center;'>We're uploading the LMF file. This process can take a little while (depending how big is the uploaded wordnet)...</div><div style='text-align:center; font-size: 250%;'><i class='fa fa-spinner fa-pulse fa-4x fa-fw'></i></div>";
-
- 	    $.getJSON($SCRIPT_ROOT + '/_confirm_wn_upload', {
- 		user: $('input[name="current_user"]').val(),
- 		fn: $('input[name="fn"]').val(),
-
- 	    }, function(data) {
-
- 		var u = $('input[name="current_user"]').val();
-
- 		if (data.result) {
- 		    var r = String(data.result);
- 		    window.location.replace($SCRIPT_ROOT + "/temporary");
-
- 		} else {
-                    valid.innerHTML = "<div style='text-align:center;'>We're sorry to inform you that something went wrong. The upload of your resource has failed.</div>";
- 		    swal('Oh noes!',
- 			'Something bad happened. Please report this!',
- 			'error');
- 		}
- 	    });
-
- 	}, function(dismiss) {
- 	    if (dismiss === 'cancel') {
- 		swal(
- 		    'Cancelled',
- 		    'No changes were made to ILI :)',
- 		    'error'
- 		);
- 	    }
- 	})
-}
-</script>
-
-
 </div>
 
 <div style="clear: both;"></div>
