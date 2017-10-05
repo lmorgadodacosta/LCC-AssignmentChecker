@@ -4,7 +4,7 @@
 import os, sys, sqlite3, datetime, urllib, gzip, requests
 from time import sleep
 from flask import Flask, render_template, g, request, redirect, url_for, send_from_directory, session, flash, jsonify, make_response, Markup
-from flask_login import LoginManager, UserMixin, login_required, login_user, logout_user, current_user#, wraps
+from flask_login import LoginManager, UserMixin, login_required, login_user, logout_user, current_user
 from functools import wraps
 from itsdangerous import URLSafeTimedSerializer # for safe session cookies
 from collections import defaultdict as dd
@@ -20,7 +20,6 @@ from werkzeug import secure_filename
 from common_login import *
 from common_sql import *
 from corpus import *
-# from omw_sql import *
 from check import *
 
 
@@ -79,14 +78,14 @@ def logout():
 def before_request():
     g.admin = connect_admin()
     g.corpus = connect_corpus()
-    # g.omw = connect_omw()
+    g.gold = connect_gold()
 
 @app.teardown_request
 def teardown_request(exception):
     if hasattr(g, 'db'):
         g.admin.close()
         g.corpus.close()
-        # g.omw.close()
+        g.gold.close()
 ################################################################################
 
 

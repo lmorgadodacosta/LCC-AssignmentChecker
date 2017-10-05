@@ -14,6 +14,7 @@ with app.app_context():
 
     ADMINDB = 'db/admin.db'
     CORPUSDB = 'db/corpus.db'
+    GOLDDB = 'db/goldcorpus.db'
 
 
     ############################################################################
@@ -25,6 +26,9 @@ with app.app_context():
     def connect_corpus():
         return sqlite3.connect(CORPUSDB)
 
+    def connect_gold():
+        return sqlite3.connect(GOLDDB)
+
     
     def query_admin(query, args=(), one=False):
         cur = g.admin.execute(query, args)
@@ -32,14 +36,17 @@ with app.app_context():
                    for idx, value in enumerate(row)) for row in cur.fetchall()]
         return (rv[0] if rv else None) if one else rv
 
-
     def query_corpus(query, args=(), one=False):
         cur = g.corpus.execute(query, args)
         rv = [dict((cur.description[idx][0], value)
                    for idx, value in enumerate(row)) for row in cur.fetchall()]
         return (rv[0] if rv else None) if one else rv
 
-    
+    def query_gold(query, args=(), one=False):
+        cur = g.gold.execute(query, args)
+        rv = [dict((cur.description[idx][0], value)
+                   for idx, value in enumerate(row)) for row in cur.fetchall()]
+        return (rv[0] if rv else None) if one else rv
 
     def write_admin(query, args=(), one=False):
         cur = g.admin.cursor()
@@ -55,6 +62,12 @@ with app.app_context():
         g.corpus.commit()
         return lastid
 
+    def write_gold(query, args=(), one=False):
+        cur = g.gold.cursor()
+        cur.execute(query, args)
+        lastid = cur.lastrowid
+        g.gold.commit()
+        return lastid
 
 
     ############################################################################

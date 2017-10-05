@@ -28,12 +28,9 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['STATIC'] = STATIC
 
 
+
 with app.app_context():
 
-
-    def put_h1(html):
-        """This tags text marked as bold with h5 headers"""
-        return html.replace("<strong>", "<h5><strong>").replace("</strong>", "</strong></h5>")
 
     def put_p_for_headings(html):
         html =  html.replace("<h1>", "<h1><p>").replace("</h1>", "</p></h1>")
@@ -43,6 +40,7 @@ with app.app_context():
         html =  html.replace("<h5>", "<h5><p>").replace("</h4>", "</p></h5>")
 
         return html
+
 
     def put_p_or_LF(html):
         ''' This puts LF("\n") before single '<br />'s
@@ -428,14 +426,16 @@ with app.app_context():
         change = False
         for sid in words.keys():
             if len(list(words[sid].keys())) >= threshold:
+
                 
                 change = True
-                html += """<p><div class="tooltip seriouserror">
+                html += """<p><span class="tooltip seriouserror">
                 <b>Sentence:</b> <em>{}</em>
                 <br> The sentence above seems to be a bit long. 
                 You might want to consider splitting it into shorter sentences.
-                <span class="tooltiptext">Tooltip text<br>Test a line break! It's full HTML!yay!</span>
-                </div>
+                <span class="tooltiptext">Tooltip text<br>Test a <b>line</b> 
+                break! It's full HTML!yay!</span>
+                </span>
                  </p>""".format(sents[sid][2])
 
 
@@ -449,9 +449,9 @@ with app.app_context():
                 if words[sid][wid][2] in informal_lang:
                     change = True
                     html += u"""<p><b>Sentence:</b> <em>{}</em><br>
-                    <span class="milderror">The sentence above seems to make use of informal 
-                    language. Please refrain from using the word 
-                    <b><em>{}</em></b></span>.</p>
+                    <span class="tooltip milderror">The sentence above seems to 
+                    make use of informal language. Please refrain from using the 
+                    word <b><em>{}</em></b></span>.</p>
                     """.format(sents[sid][2], words[sid][wid][0])
 
 
