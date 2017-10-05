@@ -6,12 +6,12 @@ body {
   border-bottom:1px #aaaaaa solid;
   overflow: visible;
   height: 9px;
-  margin: 15px 0 20px 0;  
+  margin: 15px 0 20px 0;
 }
 
 #line span{
 background-color: #aaaaaa;
-border-radius: 5px 5px 5px 3px;  //rounds corners 
+border-radius: 5px 5px 5px 3px;  //rounds corners
 font-weight: normal;
 font-size:small;
 color: white;
@@ -37,7 +37,7 @@ body {
 
 }
 #headerL {
-    width: 80%; 
+    width: 80%;
     float:left;
 }
 #headerR {
@@ -53,14 +53,14 @@ body {
     padding-bottom: 90px;   /* Height of the footer */
 }
 .b_float_left {
-    width: 49%; 
+    width: 49%;
     float: left;
     overflow-y: scroll;
     padding: 10px;
     padding-bottom:90px;   /* Height of the footer */
 }
 .b_float_right {
-    width: 49%; 
+    width: 49%;
     float: right;
     overflow-y: scroll;
     padding: 10px;
@@ -109,7 +109,7 @@ a.concept:link {
     text-decoration:none;
 }
 a.concept:visited {
-    color:#8B0000;  
+    color:#8B0000;
     font-weight:bold;
     text-decoration:none;
 }
@@ -150,4 +150,67 @@ span.over-under > .over {
 }
 span.over-under > .under {
     display: table-row;
+}
+
+
+
+
+
+/*** Simple HTML Tooltip
+usage like so:
+<div class="tooltip">Hover over this div
+  <span class="tooltiptext">Here is the full HTML tooltip text</span>
+</div>
+***/
+
+.tooltip {
+    position: relative;
+    display: inline-block;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    max-width: 500px;
+    background-color: black;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px 5px;
+    position: absolute;
+    z-index: 1;
+    bottom: 150%;
+    left: 50%;
+    margin-left: -60px;
+}
+
+.tooltip .tooltiptext::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: black transparent transparent transparent;
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+}
+
+
+/***
+ This is the class for errors, it could be adapted into a gradient later
+***/
+
+.milderror {
+    background: rgba(255,255,0,0.4);
+    border-radius: 7px;
+    padding: 0px 5px 0px 5px;
+}
+
+.seriouserror {
+    background: rgba(255,0,0,0.4);
+    border-radius: 7px;
+    padding: 0px 5px 0px 5px;
 }

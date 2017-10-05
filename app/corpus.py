@@ -373,32 +373,15 @@ with app.app_context():
         return html, docid
 
 
-
-
-
-
-    def convert_image(image):
-        """This should save the image into the UPLOAD_FOLDER. """
-        with image.open() as image_bytes:
-            # encoded_src = base64.b64encode(image_bytes.read()).decode("ascii")
-            # FOR NOW JUST PUT A PLACEHOLDER
-            encoded_src = "IMAGE PLACEHOLDER"
-        return {
-            # "src": "data:{0};base64,{1}".format(image.content_type, encoded_src)
-            "src": encoded_src
-        }
-
     
     def docx2html(docname):
         """ Convert an uploaded .docx document into HTML, and upload it into the database."""
 
 
         with open(os.path.join(app.config['UPLOAD_FOLDER'], docname), 'rb') as docx_file:
-            result = mammoth.convert_to_html(docx_file, convert_image=mammoth.images.img_element(convert_image))
-            print("MESSAGES: " + str(result.messages)) # print if anyting went wrong during convertion
-
+            result = mammoth.convert_to_html(docx_file)
             html = result.value
-            html = html.replace(u'\xa0', ' ')
+            html = html.replace(u'\xa0', ' ') # replacing non-breaking with a space
             print(html)
 
 
@@ -441,21 +424,19 @@ with app.app_context():
 
 
         # CHECK FOR SENTENCE LENGTH
-        threshold = 35
+        threshold = 20
         change = False
         for sid in words.keys():
             if len(list(words[sid].keys())) >= threshold:
                 
-                # FIXME! this u"string" will not work on python3
                 change = True
-                html += u"""<p><b>Sentence:</b> <em>{}</em>
+                html += """<p><div class="tooltip seriouserror">
+                <b>Sentence:</b> <em>{}</em>
                 <br> The sentence above seems to be a bit long. 
                 You might want to consider splitting it into shorter sentences.
+                <span class="tooltiptext">Tooltip text<br>Test a line break! It's full HTML!yay!</span>
+                </div>
                  </p>""".format(sents[sid][2])
-
-        if change: # Add a separator if something was added 
-            html += "<hr>"
-
 
 
         # CHECK FOR PET PEEVES
@@ -468,9 +449,9 @@ with app.app_context():
                 if words[sid][wid][2] in informal_lang:
                     change = True
                     html += u"""<p><b>Sentence:</b> <em>{}</em><br>
-                    The sentence above seems to make use of informal 
+                    <span class="milderror">The sentence above seems to make use of informal 
                     language. Please refrain from using the word 
-                    <b><em>{}</em></b>.</p>
+                    <b><em>{}</em></b></span>.</p>
                     """.format(sents[sid][2], words[sid][wid][0])
 
 
