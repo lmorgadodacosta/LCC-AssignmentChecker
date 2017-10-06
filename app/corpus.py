@@ -172,6 +172,37 @@ with app.app_context():
         return html_list
 
 
+    def add_errors_into_html(html, error_list):
+        for sid in error_list.keys():
+            #colour = ""
+            label_and_string = ""
+            cfds = []
+            for eid in sorted(error_list[sid].keys()):
+                cfds.append(error_list[sid][eid]["confidence"])
+                label_and_string += '''<b>{}</b>'''.format(error_list[sid][eid]["label"])
+                if error_list[sid][eid]["string"] != None:
+                    label_and_string += ":"
+                    label_and_string += error_list[sid][eid]["string"]
+                label_and_string += ";"
+
+            if max(cfds) > 5:
+                html = html.replace('error_s%d' % sid, "seriouserror")
+            else:
+                html = html.replace('error_s%d' % sid, "milderror")
+
+
+            rplc = '''<span class=\"tooltiptext\">{}</span>'''.format(label_and_string)
+            html = html.replace('errortext_s%d' % sid, rplc)
+ 
+
+        pttn1 = r'(\sclass=\"tooltip\serror_s[0-9]+\")'
+        html = re.sub(pttn1, "", html)
+
+        pttn2 = r'(errortext_s[0-9]+)'
+        html = re.sub(pttn2, "", html)
+
+        return html
+
 
     def unescape(s):
       s = s.replace("&lt;", "<")
@@ -322,13 +353,14 @@ with app.app_context():
                     #print("MS: ", matching_string)
                     if matching_string.startswith(sent):  # matching_string contains sent or they are the same
                         if len(matched_sent) == 0:  # whole the sentence matches
-                            matched_string += "<span id=\"s"+str(sid)+"\">"+sent+"</span>"
+                            #matched_string += "<span id=\"s"+str(sid)+"\">"+sent+"</span>"
+                            matched_string += ('<span id=\"s%d\" class=\"tooltip error_s%d\">'+sent+'errortext_s%d</span>') % (sid, sid, sid)
                             if len(matching_string) > len(sent):
                                 matching_string = matching_string[len(sent):]
                             else:
                                 matching_string = ""
                         else: # html tag(s) is/are inserted in the middle of the sentence
-                            matched_string += sent+"</span>"
+                            matched_string += '''{0}errortext_s{1}</span>'''.format(sent, sid)
                             if len(matching_string) > len(sent):
                                 matching_string = matching_string[len(sent):]
                             else:
@@ -340,7 +372,8 @@ with app.app_context():
 
                     elif sent.startswith(matching_string):   # sent contains matching_string
                         if len(matched_sent) == 0:  # the starting points are the same
-                            matched_string += "<span id=\"s"+str(sid)+"\">"+matching_string
+                            #matched_string += "<span id=\"s"+str(sid)+"\">"+matching_string
+                            matched_string += ('<span id=\"s%d\" class=\"tooltip error_s%d\">'+matching_string) % (sid, sid)
                         else:
                             matched_string += matching_string
                         matched_sent += matching_string
@@ -394,12 +427,16 @@ with app.app_context():
 
             
 
-            errors = check_doc(docid)
+            #errors = check_doc(docid)
 
 
-            return errors + html
+            #return errors + html
 
+            error_list, error_html = check_doc(docid)
+            
+            html = add_errors_into_html(html, error_list)
 
+            return error_html + html
 
 
 
@@ -420,6 +457,8 @@ with app.app_context():
 
         words = fetch_words_by_sid(sid_min, sid_max)
 
+        doc_eid = 0
+        onsite_error = dd(lambda: dd(dict))
 
         # CHECK FOR SENTENCE LENGTH
         threshold = 20
@@ -438,6 +477,8 @@ with app.app_context():
                 </span>
                  </p>""".format(sents[sid][2])
 
+                onsite_error[sid][doc_eid] = {"confidence": 10, "position": "all", "string": None, "label": "LongSentence"}
+                doc_eid += 1
 
         # CHECK FOR PET PEEVES
         informal_lang = ['hassle', 'Hassle', 'tackle', 'Tackle'] 
@@ -453,6 +494,9 @@ with app.app_context():
                     make use of informal language. Please refrain from using the 
                     word <b><em>{}</em></b></span>.</p>
                     """.format(sents[sid][2], words[sid][wid][0])
+
+                    onsite_error[sid][doc_eid] = {"confidence": 5, "position": str(wid), "string": words[sid][wid][2], "label": "InformalWord"}
+                    doc_eid += 1
 
 
 
@@ -471,14 +515,17 @@ with app.app_context():
                     </p>
                     """.format(sents[sid][2])
 
-
+                    onsite_error[sid][doc_eid] = {"confidence": 5, "position": "all", "string": None, "label": "NoParse"}
+                    doc_eid += 1
 
         if change: # Add a separator if something was added 
             html += "<hr>"
 
 
 
-        return html
+        #return html
+
+        return onsite_error, html
 
 
 
