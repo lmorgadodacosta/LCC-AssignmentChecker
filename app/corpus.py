@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-
+import time
 import sqlite3, os, sys, datetime, mammoth, re
 from flask import Flask, current_app, g
 from flask import render_template, g, request, redirect, url_for, send_from_directory, session, flash
@@ -19,6 +19,8 @@ from common_sql import *
 import delphin
 from delphin.interfaces import ace
 
+class TimeoutError(Exception):
+    ''' Too long processing time '''
 
 UPLOAD_FOLDER = 'public-uploads'
 STATIC = 'static'
@@ -89,10 +91,18 @@ with app.app_context():
 
         pttn = re.compile('(</?(ol|ul|li)>)|(<li\sid.+?>)')
 
+        (l_start_count, l_end_count) = (0, 0)
         while re.search(pttn, unchecked_html):
-            first_end_pstn = re.search(pttn, unchecked_html).end()
+            m = re.search(pttn, unchecked_html)
+            if m.group(0).startswith("<ol") or m.group(0).startswith("<ul") or m.group(0).startswith("<li"):
+                l_start_count += 1
+            else:
+                l_end_count += 1
+            first_end_pstn = m.end()
             checked_html += unchecked_html[:first_end_pstn]
             unchecked_html = unchecked_html[first_end_pstn:]
+            if l_start_count == l_end_count:
+                continue
             if not re.search(pttn, unchecked_html):
                 break
             second = re.search(pttn, unchecked_html)
@@ -186,14 +196,14 @@ with app.app_context():
                 label_and_string += ";"
 
             if max(cfds) > 5:
-                html = html.replace('error_s%d' % sid, "seriouserror")
+                html = html.replace('error_s{}'.format(sid), "seriouserror")
             else:
-                html = html.replace('error_s%d' % sid, "milderror")
+                html = html.replace('error_s{}'.format(sid), "milderror")
 
 
             rplc = '''<span class=\"tooltiptext\">{}</span>'''.format(label_and_string)
-            html = html.replace('errortext_s%d' % sid, rplc)
- 
+            html = html.replace('errortext_s{}'.format(sid), rplc)
+
 
         pttn1 = r'(\sclass=\"tooltip\serror_s[0-9]+\")'
         html = re.sub(pttn1, "", html)
@@ -202,6 +212,64 @@ with app.app_context():
         html = re.sub(pttn2, "", html)
 
         return html
+
+    def make_structure_valid(html):
+        ''' make the structure valid if it is destroied when putting <span>s '''
+
+        pttn_opcl = re.compile(r'(<span(.*?)>)|(</span></span>)')
+
+        ''' dealing with <strong> '''
+        unchecked_html = html
+        checked_html = ""
+
+        while '<strong>' in unchecked_html:
+            open_start_pos = unchecked_html.index('<strong>')
+            open_end_pos = open_start_pos+8
+            checked_html += unchecked_html[:open_end_pos]
+            unchecked_html = unchecked_html[open_end_pos:]
+
+            while re.search(pttn_opcl, unchecked_html[:unchecked_html.index('</strong>')]):
+                m = re.search(pttn_opcl, unchecked_html[:unchecked_html.index('</strong>')])
+                checked_html += unchecked_html[:m.start()]
+                checked_html += '</strong>'
+                checked_html += m.group(0)
+                checked_html += '<strong>'
+                unchecked_html = unchecked_html[m.end():]
+
+            close_end_pos = unchecked_html.index('</strong>')+9
+            checked_html += unchecked_html[:close_end_pos]
+            unchecked_html = unchecked_html[close_end_pos:]
+
+        checked_html += unchecked_html
+        checked_html = checked_html.replace('<strong></strong>', '')
+
+        ''' dealing with <em> '''
+
+        unchecked_html = checked_html
+        checked_html = ""
+
+        while '<em>' in unchecked_html:
+            open_start_pos = unchecked_html.index('<em>')
+            open_end_pos = open_start_pos+8
+            checked_html += unchecked_html[:open_end_pos]
+            unchecked_html = unchecked_html[open_end_pos:]
+
+            while re.search(pttn_opcl, unchecked_html[:unchecked_html.index('</em>')]):
+                m = re.search(pttn_opcl, unchecked_html[:unchecked_html.index('</em>')])
+                checked_html += unchecked_html[:m.start()]
+                checked_html += '</em>'
+                checked_html += m.group(0)
+                checked_html += '<em>'
+                unchecked_html = unchecked_html[m.end():]
+
+            close_end_pos = unchecked_html.index('</em>')+9
+            checked_html += unchecked_html[:close_end_pos]
+            unchecked_html = unchecked_html[close_end_pos:]
+
+        checked_html += unchecked_html
+        checked_html = checked_html.replace('<em></em>', '')
+
+        return checked_html
 
 
     def unescape(s):
@@ -240,10 +308,10 @@ with app.app_context():
         else:
             return 'x'
 
-    def pos_lemma(tagged_sent):
-        wnl = WordNetLemmatizer()
+    def pos_lemma(lemmatize, tagged_sent):
+        #wnl = WordNetLemmatizer()
         # Lemmatize = lru_cache(maxsize=5000)(wnl.lemmatize)
-        lemmatize = wnl.lemmatize
+        #lemmatize = wnl.lemmatize
         record_list = []
         wid = 0
         for word, pos in tagged_sent:
@@ -274,6 +342,12 @@ with app.app_context():
         sid = fetch_max_sid()
 
 
+        ''' activate lemmatizer for pos_lemma '''
+        wnl = WordNetLemmatizer()
+        lemmatize = wnl.lemmatize
+
+        ''' SET A TIME LIMIT '''
+        time_limit = time.time() + 240
 
         for pid in range(1, pid_max+1):
             p_tag = "<p id=\"p"+str(pid)+"\">"
@@ -314,7 +388,7 @@ with app.app_context():
                 insert_into_sent(sid, docid, pid, sent)
 
                 # INSERT INTO WORD TABLE
-                word_list = pos_lemma(sent2words(sent))  # e.g. [('He', 'PRP', 'he'), ('runs', 'VB', 'run')]
+                word_list = pos_lemma(lemmatize, sent2words(sent))  # e.g. [('He', 'PRP', 'he'), ('runs', 'VB', 'run')]
 
                 for w in word_list:
                     wid = fetch_max_wid(sid) + 1
@@ -349,12 +423,15 @@ with app.app_context():
                 while len(sent) > 0:
                     ''' This section may go into an infinite loop if there is something wrong
                          with the input html                                                '''
+                    if time.time() > time_limit:
+                        raise TimeoutError
+                    #time.sleep(10)
                     #print("SENTENCE: ", sent)
                     #print("MS: ", matching_string)
                     if matching_string.startswith(sent):  # matching_string contains sent or they are the same
                         if len(matched_sent) == 0:  # whole the sentence matches
                             #matched_string += "<span id=\"s"+str(sid)+"\">"+sent+"</span>"
-                            matched_string += ('<span id=\"s%d\" class=\"tooltip error_s%d\">'+sent+'errortext_s%d</span>') % (sid, sid, sid)
+                            matched_string += '''<span id=\"s{0}\" class=\"tooltip error_s{1}\">{2}errortext_s{3}</span>'''.format(sid, sid, sent, sid)
                             if len(matching_string) > len(sent):
                                 matching_string = matching_string[len(sent):]
                             else:
@@ -373,7 +450,7 @@ with app.app_context():
                     elif sent.startswith(matching_string):   # sent contains matching_string
                         if len(matched_sent) == 0:  # the starting points are the same
                             #matched_string += "<span id=\"s"+str(sid)+"\">"+matching_string
-                            matched_string += ('<span id=\"s%d\" class=\"tooltip error_s%d\">'+matching_string) % (sid, sid)
+                            matched_string += '''<span id=\"s{0}\" class=\"tooltip error_s{1}\">{2}'''.format(sid, sid, matching_string)
                         else:
                             matched_string += matching_string
                         matched_sent += matching_string
@@ -399,7 +476,7 @@ with app.app_context():
 
         html = "".join(html_list)
         html = remove_LF(html)
-        update_html_into_doc(docid, html)
+        #update_html_into_doc(docid, html)   ####tk#### moved after check_doc
 
         return html, docid
 
@@ -422,7 +499,7 @@ with app.app_context():
             html = put_p_into_list(html)
             html = put_p_for_headings(html)
             html = put_pid(html)
-            print("\n"+html)
+            #print("\n"+html)
             html, docid = pid_sids2html(html, docname)
 
             
@@ -432,11 +509,18 @@ with app.app_context():
 
             #return errors + html
 
-            error_list, error_html = check_doc(docid)
-            
-            html = add_errors_into_html(html, error_list)
+            #error_list, error_html = check_doc(docid)
+            error_list = check_doc(docid)
 
-            return error_html + html
+            html = add_errors_into_html(html, error_list)
+            html = make_structure_valid(html)
+            print("\n"+html)
+            #### html should be added to doc table here    ####tk####
+            update_html_into_doc(docid, html)              ####tk####
+            #return error_html + html
+
+            return html
+
 
 
 
@@ -449,7 +533,7 @@ with app.app_context():
         It returns html reporting this."""
         # FIXME, THIS SHOULD BE RETURNING JS/CSS code instead of HTML
 
-        html = "<h5>Diagnosis:</h5>"
+        #html = "<h5>Diagnosis:</h5>"
 
         sents = fetch_sents_by_docid(docid)
         sid_min = min(sents.keys())
@@ -462,20 +546,19 @@ with app.app_context():
 
         # CHECK FOR SENTENCE LENGTH
         threshold = 20
-        change = False
+        #change = False
         for sid in words.keys():
             if len(list(words[sid].keys())) >= threshold:
 
-                
-                change = True
-                html += """<p><span class="tooltip seriouserror">
-                <b>Sentence:</b> <em>{}</em>
-                <br> The sentence above seems to be a bit long. 
-                You might want to consider splitting it into shorter sentences.
-                <span class="tooltiptext">Tooltip text<br>Test a <b>line</b> 
-                break! It's full HTML!yay!</span>
-                </span>
-                 </p>""".format(sents[sid][2])
+                #change = True
+                #html += """<p><span class="tooltip seriouserror">
+                #<b>Sentence:</b> <em>{}</em>
+                #<br> The sentence above seems to be a bit long. 
+                #You might want to consider splitting it into shorter sentences.
+                #<span class="tooltiptext">Tooltip text<br>Test a <b>line</b> 
+                #break! It's full HTML!yay!</span>
+                #</span>
+                # </p>""".format(sents[sid][2])
 
                 onsite_error[sid][doc_eid] = {"confidence": 10, "position": "all", "string": None, "label": "LongSentence"}
                 doc_eid += 1
@@ -484,16 +567,16 @@ with app.app_context():
         informal_lang = ['hassle', 'Hassle', 'tackle', 'Tackle'] 
         # LMC FIXME!, it seems that lemmatizer doesn't work well when it thinks it's a proper noun. 
         # I added the capitalised forms by hand for now  
-        change = False
+        #change = False
         for sid in words.keys():
             for wid in words[sid].keys():
                 if words[sid][wid][2] in informal_lang:
-                    change = True
-                    html += u"""<p><b>Sentence:</b> <em>{}</em><br>
-                    <span class="tooltip milderror">The sentence above seems to 
-                    make use of informal language. Please refrain from using the 
-                    word <b><em>{}</em></b></span>.</p>
-                    """.format(sents[sid][2], words[sid][wid][0])
+                    #change = True
+                    #html += u"""<p><b>Sentence:</b> <em>{}</em><br>
+                    #<span class="tooltip milderror">The sentence above seems to 
+                    #make use of informal language. Please refrain from using the 
+                    #word <b><em>{}</em></b></span>.</p>
+                    #""".format(sents[sid][2], words[sid][wid][0])
 
                     onsite_error[sid][doc_eid] = {"confidence": 5, "position": str(wid), "string": words[sid][wid][2], "label": "InformalWord"}
                     doc_eid += 1
@@ -508,24 +591,24 @@ with app.app_context():
                 parses = len(parser.interact(sents[sid][2])['RESULTS'])
                 print("sid:" + str(sid) + " - " + str(parses) + " parses.")
                 if parses == 0:
-                    change = True
-                    html += u"""<p><b>Sentence:</b> <em>{}</em><br>
-                    The sentence above seems to have some problem with its grammar.
-                    Consider breaking it into smaller sentences or, possibly, revise it.   
-                    </p>
-                    """.format(sents[sid][2])
+                #    change = True
+                #    html += u"""<p><b>Sentence:</b> <em>{}</em><br>
+                #    The sentence above seems to have some problem with its grammar#/.
+                ###    Consider breaking it into smaller sentences or, possibly, revise it.   
+                #    </p>
+                #    """.format(sents[sid][2])
 
                     onsite_error[sid][doc_eid] = {"confidence": 5, "position": "all", "string": None, "label": "NoParse"}
                     doc_eid += 1
 
-        if change: # Add a separator if something was added 
-            html += "<hr>"
+        #if change: # Add a separator if something was added 
+        #    html += "<hr>"
 
 
 
         #return html
 
-        return onsite_error, html
+        return onsite_error#, html
 
 
 
