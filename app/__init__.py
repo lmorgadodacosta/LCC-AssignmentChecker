@@ -29,7 +29,7 @@ app = Flask(__name__)
 app.secret_key = "!$flhgSgngNO%$#SOET!$!"
 app.config["REMEMBER_COOKIE_DURATION"] = datetime.timedelta(minutes=30)
 
-
+#error_logging = open("corpus_inputting_error_log", "a")#, "utf-8")    ####tk####
 
 ################################################################################
 # LOGIN
@@ -255,13 +255,44 @@ def teardown_request(exception):
 
 
 
-
 @app.route('/_file2db', methods=['GET', 'POST'])
 @login_required(role=0, group='open')
 def file2db():
 
+    def current_time():
+        '''   2017-8-17  14:35    '''
+        d = datetime.datetime.now()
+        return d.strftime('%Y-%m-%d_%H:%M:%S')
+
+
+    error_logging = open("corpus_inputting_error_log", "a")
+
+
     filename = request.args.get('fn', None)
-    r = docx2html(filename)
+
+
+    try:
+        r = docx2html(filename)
+
+    except TimeoutError:
+        current_time = current_time()
+        error_logging.write(current_time+"\n")
+        error_logging.write("DOCNAME: {}\n".format(filename))
+        error_logging.write("Type: Timeout\n\n")
+
+        return render_template("exception.html")
+
+    except Exception as e:
+        current_time = current_time()
+        error_logging.write(current_time+"\n")
+        error_logging.write("DOCNAME: {}\n".format(filename))
+        error_logging.write("Type: {type}\n".format(type=type(e)))
+        error_logging.write("Args: {args}\n".format(args=e.args))
+        error_logging.write("Message: {message}\n".format(message=e.message))
+        error_logging.write("Error: {error}\n\n".format(error=e))
+
+        return render_template("exception.html")
+
 
 
 #     vr, filename, wn, wn_dtls = validateFile(current_user.id, filename)
@@ -271,10 +302,11 @@ def file2db():
 
     # return jsonify(result=False)
 
+    else:
+        return jsonify(result=r)
 
-    return jsonify(result=r)
-
-
+    finally:
+        error_logging.close()
 
 ################################################################################
 
