@@ -528,18 +528,16 @@ with app.app_context():
     # CHECKS TO DOCUMENT
     #############################
 
-    def check_doc(docid):
+    def check_doc(docid, gold=False):
         """Given a docid, it checks the document for multiple problems. 
         It returns html reporting this."""
         # FIXME, THIS SHOULD BE RETURNING JS/CSS code instead of HTML
 
         #html = "<h5>Diagnosis:</h5>"
-
-        sents = fetch_sents_by_docid(docid)
+        sents = fetch_sents_by_docid(docid, gold)
         sid_min = min(sents.keys())
         sid_max = max(sents.keys())
-
-        words = fetch_words_by_sid(sid_min, sid_max)
+        words = fetch_words_by_sid(sid_min, sid_max, gold)
 
         doc_eid = 0
         onsite_error = dd(lambda: dd(dict))
@@ -584,7 +582,7 @@ with app.app_context():
 
 
         # USE ACE TO CHECK PARSES FOR EACH SENTENCE
-        with ace.AceParser(os.path.join(app.config['STATIC'], "erg.dat"), executable=os.path.join(app.config['STATIC'], "ace"), cmdargs=['-1']) as parser:
+        with ace.AceParser(os.path.join(app.config['STATIC'], "erg.dat"), executable=os.path.join(app.config['STATIC'], "ace"), cmdargs=['-1', '--timeout=5']) as parser:
 
             for sid in sents.keys():
                 
@@ -633,19 +631,29 @@ with app.app_context():
                 return 0
 
 
-    def fetch_sents_by_docid(docid):
+    def fetch_sents_by_docid(docid, gold=False):
         sents = dd(lambda: dd())
-        for r in query_corpus("""SELECT sid, pid, sent from sent
-                                 WHERE docid = ?""", [docid]):    
-            sents[r['sid']]=[r['sid'], r['pid'],r['sent']]
+        if gold:
+            for r in query_gold("""SELECT sid, pid, sent from sent
+            WHERE docid = ?""", [docid]):
+                sents[r['sid']]=[r['sid'], r['pid'],r['sent']]
+        else:
+            for r in query_corpus("""SELECT sid, pid, sent from sent
+            WHERE docid = ?""", [docid]):
+                sents[r['sid']]=[r['sid'], r['pid'],r['sent']]
         return sents
 
 
-    def fetch_words_by_sid(sid_min, sid_max):
+    def fetch_words_by_sid(sid_min, sid_max, gold=False):
         words = dd(lambda: dd())
-        for r in query_corpus("""SELECT sid, wid, word, pos, lemma from word
+        if gold:
+            for r in query_gold("""SELECT sid, wid, word, pos, lemma from word
                                  WHERE sid >= ? AND sid <= ?""", [sid_min, sid_max]):    
-            words[r['sid']][r['wid']]=[r['word'], r['pos'],r['lemma']]
+                words[r['sid']][r['wid']]=[r['word'], r['pos'],r['lemma']]
+        else:
+            for r in query_corpus("""SELECT sid, wid, word, pos, lemma from word
+            WHERE sid >= ? AND sid <= ?""", [sid_min, sid_max]):
+                words[r['sid']][r['wid']]=[r['word'], r['pos'],r['lemma']]
         return words
 
 
