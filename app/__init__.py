@@ -539,7 +539,7 @@ def check_gold():
 
                     #error_type_string += '''<br />\n'''
 
-            if (sys_sid == True) or (sys_sid == True):
+            if (sys_sid == True) or (at_sid == True):
                 sent_string = escape(sents[sid][2])+'<br />\n'
                 check_gold_html += sent_string
                 check_gold_html += error_type_string
