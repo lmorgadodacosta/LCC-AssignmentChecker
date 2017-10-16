@@ -542,71 +542,107 @@ with app.app_context():
         doc_eid = 0
         onsite_error = dd(lambda: dd(dict))
 
-        # CHECK FOR SENTENCE LENGTH
-        threshold = 20
-        #change = False
+        threshold = 40
         for sid in words.keys():
             if len(list(words[sid].keys())) >= threshold:
-
-                #change = True
-                #html += """<p><span class="tooltip seriouserror">
-                #<b>Sentence:</b> <em>{}</em>
-                #<br> The sentence above seems to be a bit long. 
-                #You might want to consider splitting it into shorter sentences.
-                #<span class="tooltiptext">Tooltip text<br>Test a <b>line</b> 
-                #break! It's full HTML!yay!</span>
-                #</span>
-                # </p>""".format(sents[sid][2])
 
                 onsite_error[sid][doc_eid] = {"confidence": 10, "position": "all", "string": None, "label": "LongSentence"}
                 doc_eid += 1
 
+
         # CHECK FOR PET PEEVES
         informal_lang = ['hassle', 'Hassle', 'tackle', 'Tackle'] 
+
+        
+        contractions = ["ain't", "aren't", "can't", "could've", "couldn't", "didn't", "doesn't",
+                        "don't", "gonna", "gotta", "hadn't", "hasn't", "haven't", "he'd", "he'll",
+                        "he's", "how'd", "how'll", "how's", "I'd", "I'll", "I'm", "I've", "isn't",
+                        "it'd", "it'll", "it's", "mayn't", "may've", "mightn't", "might've", "mustn't",
+                        "must've", "needn't", "oughtn't", "shan't", "she'd", "she'll", "she's",
+                        "should've", "shouldn't",  "that'll", "that're", "that's", "that'd", "there'd",
+                        "there're", "there's", "these're", "they'd", "they'll", "they're", "they've",
+                        "this's", "those're", "wasn't", "we'd", "we'll", "we're", "we've", "weren't",
+                        "what'd", "what'll", "what're", "what's", "what've", "when's", "where'd", "where're",
+                        "where's", "where've", "which's", "who'd", "who'll", "who're", "who's", "who've",
+                        "why'd", "why're", "why's", "won't", "would've", "wouldn't", "y'all", "you'd",
+                        "you'll", "you're", "you've"]
+
+        # FIXME, contractions need to be checked on sentence; also multiple ' ’
+
+
         # LMC FIXME!, it seems that lemmatizer doesn't work well when it thinks it's a proper noun. 
         # I added the capitalised forms by hand for now  
-        #change = False
         for sid in words.keys():
             for wid in words[sid].keys():
                 if words[sid][wid][2] in informal_lang:
-                    #change = True
-                    #html += u"""<p><b>Sentence:</b> <em>{}</em><br>
-                    #<span class="tooltip milderror">The sentence above seems to 
-                    #make use of informal language. Please refrain from using the 
-                    #word <b><em>{}</em></b></span>.</p>
-                    #""".format(sents[sid][2], words[sid][wid][0])
 
                     onsite_error[sid][doc_eid] = {"confidence": 5, "position": str(wid), "string": words[sid][wid][2], "label": "InformalWord"}
                     doc_eid += 1
 
 
+                if words[sid][wid][2] in contractions: #FIXME, see above
 
-        # USE ACE TO CHECK PARSES FOR EACH SENTENCE
-        with ace.AceParser(os.path.join(app.config['STATIC'], "erg.dat"), executable=os.path.join(app.config['STATIC'], "ace"), cmdargs=['-1', '--timeout=5']) as parser:
-
-            for sid in sents.keys():
-                
-                parses = len(parser.interact(sents[sid][2])['RESULTS'])
-                print("sid:" + str(sid) + " - " + str(parses) + " parses.")
-                if parses == 0:
-                #    change = True
-                #    html += u"""<p><b>Sentence:</b> <em>{}</em><br>
-                #    The sentence above seems to have some problem with its grammar#/.
-                ###    Consider breaking it into smaller sentences or, possibly, revise it.   
-                #    </p>
-                #    """.format(sents[sid][2])
-
-                    onsite_error[sid][doc_eid] = {"confidence": 5, "position": "all", "string": None, "label": "NoParse"}
+                    onsite_error[sid][doc_eid] = {"confidence": 5, "position": str(wid), "string": words[sid][wid][2], "label": "Contraction"}
                     doc_eid += 1
 
-        #if change: # Add a separator if something was added 
-        #    html += "<hr>"
+
+        
+
+        # USE ACE TO CHECK PARSES FOR EACH SENTENCE
+        with ace.AceParser(os.path.join(app.config['STATIC'], "erg.dat"),
+                           executable=os.path.join(app.config['STATIC'], "ace"),
+                           cmdargs=['-1', '--timeout=5']) as parser, \
+             ace.AceParser(os.path.join(app.config['STATIC'], "erg-mal.dat"),
+                           executable=os.path.join(app.config['STATIC'], "ace"),
+                           cmdargs=['-1', '--timeout=5']) as mal:
+             
+
+            
+            for sid in sents.keys():
+                
+                erg_parse = parser.interact(sents[sid][2])
+                parses = len(erg_parse['RESULTS'])
+
+                print("sid:" + str(sid) + " - " + str(parses) + " parses.")  #TEST#
+                if parses == 0:
+
+                    mal_result = mal.interact(sents[sid][2]) 
+
+                    if len(mal_result['RESULTS']) > 0:  # If the mal-grammar can get a parse
+
+                        d = str(mal_result.result(0).derivation())
+                        rbst_tags = re.findall(r'[_a-z]+rbst[_a-z]*', d)
+
+                        for tag in rbst_tags:
+
+                            onsite_error[sid][doc_eid] = {"confidence": 10, "position": "all", "string": None, "label": tag}
+                            doc_eid += 1
+
+                            # subva = "third_sg_fin_v_rbst"
+
+                        
+                    else: # only a general NoParse tag can be given
+                        onsite_error[sid][doc_eid] = {"confidence": 5, "position": "all", "string": None, "label": "NoParse"}
+                        doc_eid += 1
+
+
+                
+                else: # If the sentence is grammatical, perform other checks (e.g. mood)
+                    mrs = erg_parse.result(0).mrs()
+                    
+                    # CHECKING NON-PROPOSIITONS (mood)
+                    if 'prop' not in mrs.properties(mrs.index)['SF']:
+
+                        # print('non proposition:', mrs.properties(mrs.index)['SF'])
+                        onsite_error[sid][doc_eid] = {"confidence": 5, "position": "all", "string": None, "label": "NonProp"}
+                        doc_eid += 1
+
+                    
+                
 
 
 
-        #return html
-
-        return onsite_error#, html
+        return onsite_error
 
 
 
