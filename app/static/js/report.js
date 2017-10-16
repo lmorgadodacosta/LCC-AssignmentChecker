@@ -15,9 +15,9 @@ $(function() {
 		msg.innerHTML = "";
 		val2.innerHTML = r;
 	    } else {
-		val2.innerHTML = "ERROR!!!";
-		swal('Oh noes!',
-		     'Something bad happened. Please report this!',
+		val2.innerHTML = "We were unable to process your file.   We will do our best to fix this, but may not be able to.";
+		swal('Something bad happened.',
+		     'Please report this!',
 		     'error');
 	    }
 

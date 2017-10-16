@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os, sys, sqlite3, datetime, urllib, gzip, requests
+import os, sys, sqlite3, datetime, urllib, gzip, requests, codecs
 from time import sleep
 from flask import Flask, render_template, g, request, redirect, url_for, send_from_directory, session, flash, jsonify, make_response, Markup
 from flask_login import LoginManager, UserMixin, login_required, login_user, logout_user, current_user
@@ -255,43 +255,52 @@ def teardown_request(exception):
 
 
 
+@app.route("/_docx2html_exception")
+def docx2html_exception():
+    return render_template("exception.html")
+
 @app.route('/_file2db', methods=['GET', 'POST'])
 @login_required(role=0, group='open')
 def file2db():
 
-    def current_time():
-        '''   2017-8-17  14:35    '''
-        d = datetime.datetime.now()
-        return d.strftime('%Y-%m-%d_%H:%M:%S')
+    def current_time():                        ####tk####
+        '''   2017-8-17  14:35    '''          ####tk####
+        d = datetime.datetime.now()             ####tk####
+        return d.strftime('%Y-%m-%d_%H:%M:%S')  ####tk####
 
 
-    error_logging = open("corpus_inputting_error_log", "a")
+    error_logging = open("corpus_inputting_error_log", "a")#, "utf-8")    ####tk####
 
 
     filename = request.args.get('fn', None)
 
 
-    try:
+    try:                                                   ####tk####
         r = docx2html(filename)
 
-    except TimeoutError:
-        current_time = current_time()
-        error_logging.write(current_time+"\n")
-        error_logging.write("DOCNAME: {}\n".format(filename))
-        error_logging.write("Type: Timeout\n\n")
+    except TimeoutError:                                                       ####tk####
+        current_time = current_time()                                          ####tk####
+        error_logging.write(current_time+"\n")                                 ####tk####
+        error_logging.write("DOCNAME: {}\n".format(filename))                         ####tk####
+        error_logging.write("Type: Timeout\n\n")                            ####tk####
 
-        return render_template("exception.html")
+        #return render_template("exception.html")                               ####tk####
+        #return jsonify(result=False)#  docx2html_exception()                            ####tk####
+        r = False
+        error_logging.close()          
 
-    except Exception as e:
-        current_time = current_time()
-        error_logging.write(current_time+"\n")
-        error_logging.write("DOCNAME: {}\n".format(filename))
-        error_logging.write("Type: {type}\n".format(type=type(e)))
-        error_logging.write("Args: {args}\n".format(args=e.args))
-        error_logging.write("Message: {message}\n".format(message=e.message))
-        error_logging.write("Error: {error}\n\n".format(error=e))
-
-        return render_template("exception.html")
+    except Exception as e:                                                     ####tk####
+        current_time = current_time()                                          ####tk####
+        error_logging.write(current_time+"\n")                                 ####tk####
+        error_logging.write("DOCNAME: {}\n".format(filename))                         ####tk####
+        error_logging.write("Type: {type}\n".format(type=type(e)))               ####tk####
+        error_logging.write("Args: {args}\n".format(args=e.args))                ####tk####
+        error_logging.write("Message: {message}\n".format(message=e.message))    ####tk####
+        error_logging.write("Error: {error}\n\n".format(error=e))             ####tk####
+        error_logging.close()          
+        r = False
+        #return render_template("exception.html")                            ####tk####
+        #return jsonify(result=False)#docx2html_exception()                            ####tk####
 
 
 
@@ -302,11 +311,11 @@ def file2db():
 
     # return jsonify(result=False)
 
-    else:
-        return jsonify(result=r)
+    #else:                              ####tk####
+    return jsonify(result=r)
 
-    finally:
-        error_logging.close()
+    # finally:                           ####tk####
+    #     error_logging.close()          ####tk####
 
 ################################################################################
 
@@ -372,6 +381,180 @@ def langadmin():
 def projectadmin():
     projs = fetch_proj()
     return render_template("projectadmin.html", projs=projs)
+
+@app.route("/check_gold",methods=["GET"])
+def check_gold():
+    error_sys_dic = {}
+    for docid in range(1, 274):
+        error_sys_dic[docid] = check_doc(docid, "gold")
+
+    annotated_docids = [did[0] for did in g.gold.execute("SELECT DISTINCT docid FROM sent WHERE comment IS NOT '' ORDER BY docid")]
+
+
+    ''' extract "LongSentence" and "InformalWord" from error_sys_dic '''
+    sys_long_set = set()
+    sys_informal_set = set()
+    for docid in annotated_docids:
+        if not docid in error_sys_dic.keys():
+            continue
+        for sid in error_sys_dic[docid].keys():
+            for eid in error_sys_dic[docid][sid].keys():
+                if error_sys_dic[docid][sid][eid]["label"] == "LongSentence":
+                    sys_long_set.add((docid, sid))
+                elif error_sys_dic[docid][sid][eid]["label"] == "InformalWord":
+                    pstn = int(error_sys_dic[docid][sid][eid]["position"])
+                    sys_informal_set.add((docid, sid, pstn))
+
+    ''' extract data from gold corpus '''
+    at_label_dic = dd(lambda: dd(lambda: dd(set)))
+    at_long_set = set()
+    at_informal_set = set()
+    for docid, sid, label in g.gold.execute("SELECT sent.docid, sent.sid, error.label FROM sent INNER JOIN error ON sent.sid=error.sid").fetchall():
+        if label == "SLong":
+            at_label_dic[docid][sid][label].add("all")
+            at_long_set.add((docid, sid))
+        elif label == "StyWch":
+            for eid, in g.gold.execute('''SELECT eid FROM error WHERE label='StyWch' AND sid=?''', (sid,)).fetchall():
+                for wid, in g.gold.execute('''SELECT wid FROM ewl WHERE sid=? AND eid=?''', (sid, eid)).fetchall():
+                    for lemma, in g.gold.execute('''SELECT lemma FROM word WHERE sid=? AND wid=?''', (sid, wid)).fetchall():
+                        if lemma in ['hassle', 'tackle']:
+                            at_label_dic[docid][sid][label].add(wid)
+                            at_informal_set.add((docid, sid, wid))
+                        else:
+                            at_label_dic[docid][sid]["ANY"].add(label)
+
+        else:
+            at_label_dic[docid][sid]["ANY"].add(label)
+
+    #print(sys_informal_set)
+    #print(at_informal_set)
+
+    ''' create html '''
+    check_gold_html = ""
+
+    html_head = '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">\n'
+    html_head += '<html>\n<head>\n'
+    html_head += '<!-- This file was created by "check_gold" -->\n'
+    html_head += '    <title>System VS Annotators</title>\n'
+    html_head += '    <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=utf-8">\n'
+    #html_head += '    <script src=".js" language="javascript"></script>\n'
+    html_head += '</head>\n'
+
+    check_gold_html += html_head
+    check_gold_html += '''<hr>\n'''
+
+    ''' long sentence and informal words static '''
+    numbers_heading =  '''<h3>Numbers of long sentence and informal words (hastle/tackle)</h3>\n'''
+    #allover_sents_number = g.gold.execute('''SELECT COUNT(sid) FROM sent WHERE docid IN ('{}')'''.format("', '".join(annotated_docids))).fetchone()[0]
+    allover_sents_number = g.gold.execute('''SELECT COUNT(sid) FROM sent WHERE docid IN {}'''.format(tuple(annotated_docids))).fetchone()[0]
+    allover_sents_string = '''Allover sentences (in annotated documents): {}<br /><br />\n'''.format(allover_sents_number)
+    S_and_A_string = '''System and Annotatos agrees (long sentence): {}<br />\n'''.format(len(sys_long_set & at_long_set))
+    S_only_string = '''System only: {}<br />\n'''.format(len(sys_long_set - at_long_set))
+    A_only_string = '''Annotators only: {}<br />\n'''.format(len(at_long_set - sys_long_set))
+    N_string = '''Non of them: {}<br /><br />\n\n'''.format(allover_sents_number - len(sys_long_set | at_long_set))
+    
+    long_static_string = numbers_heading+allover_sents_string+S_and_A_string+S_only_string+A_only_string+N_string+'''<br /><br />\n'''
+    check_gold_html += long_static_string
+
+    ''' hastle & tackle  '''
+    allover_informal_number = g.gold.execute('''SELECT COUNT(word.lemma) FROM word INNER JOIN sent ON word.sid=sent.sid WHERE (word.lemma IN ('hassle', 'tackle')) AND (sent.docid IN {})'''.format(tuple(annotated_docids))).fetchone()[0]
+    allover_informal_string = '''Allover 'hassle's and 'tackle's (in annotated documents): {}<br /><br />\n'''.format(allover_informal_number)
+    S_and_A_string = '''System and Annotatos agrees (informal): {}<br />\n'''.format(len(sys_informal_set & at_informal_set))
+    S_only_string = '''System only: {}<br />\n'''.format(len(sys_informal_set - at_informal_set))
+    A_only_string = '''Annotators only: {}<br />\n'''.format(len(at_informal_set - sys_informal_set))
+    N_string = '''Non of them: {}<br /><br />\n\n'''.format(allover_informal_number - len(sys_informal_set | at_informal_set))
+
+    informal_static_string = allover_informal_string+S_and_A_string+S_only_string+A_only_string+N_string+'''<br /><hr>\n\n'''
+    check_gold_html += informal_static_string
+
+
+    ''' sents with error '''
+    s_e_heading = '''<h3>Sentences with error</h3><br />\n'''
+    check_gold_html += s_e_heading
+
+    for docid in range(1, 274):    # range(1, 274)
+        sys_docid = False
+        at_docid = False
+        if (not docid in error_sys_dic.keys()) and (not docid in at_label_dic.keys()):
+            continue
+        if docid in error_sys_dic.keys():
+            sys_docid = True
+        if docid in at_label_dic.keys():
+            at_docid = True
+        only_in_string = ""
+        if not docid in annotated_docids:
+            only_in_string = ' (not annotated)'
+        doc_top = '''\n\n<b>DOCID= {0}</b>{1}<br /><br />\n'''.format(docid, only_in_string)
+
+        check_gold_html += doc_top
+
+        sents = fetch_sents_by_docid(docid, "gold")
+        sid_min = min(sents.keys())
+        sid_max = max(sents.keys())
+
+        for sid in range(sid_min, sid_max+1):
+            sys_sid = False
+            at_sid = False
+            #if ((sys_docid == False) or (not sid in error_sys_dic[docid].keys())) and \
+            #   ((at_docid == False) or (not sid in at_label_dic[docid].keys())):
+            #    continue
+            #sent_string = escape(sents[sid][2])+'<br />\n'
+
+            #check_gold_html += sent_string
+
+            error_type_string = ""
+            ''' errors from system '''
+            if sys_docid == True:
+                if sid in error_sys_dic[docid].keys():
+                    sys_sid = True
+                    error_type_string += "&nbsp;&nbsp;System:   "
+                    sys_errors = []
+                    for eid in error_sys_dic[docid][sid].keys():
+                        sys_errors.append(error_sys_dic[docid][sid][eid]["label"])
+
+                    if "LongSentence" in sys_errors:
+                        error_type_string += '''<font color="red">LongSentence</font>; '''
+                    if "InformalWord" in sys_errors:
+                        error_type_string += '''<font color="orange">InformalWord</font>; '''
+                    if "NoParse" in sys_errors:
+                        error_type_string += '''<font color="green">NoParse</font>; '''
+
+                    error_type_string += '''<br />\n'''
+
+            ''' errors from annotators '''
+            if at_docid == True:
+                if sid in at_label_dic[docid].keys():
+                    at_sid = True
+                    error_type_string += "&nbsp;&nbsp;Annotator(s): "
+                    if "SLong" in at_label_dic[docid][sid].keys():
+                        error_type_string += '''<font color="red">SLong</font>; '''
+                    if "StyWch" in at_label_dic[docid][sid].keys():
+                        error_type_string += '''<font color="orange">StyWch(hassle/tackle)</font>; '''
+                    if "ANY" in at_label_dic[docid][sid].keys():
+                        any_labels = sorted([lb for lb in at_label_dic[docid][sid]["ANY"]])
+                        for any_label in any_labels:
+                            error_type_string += '''{}; '''.format(any_label)
+
+                    error_type_string += '''<br />\n'''
+
+                    #error_type_string += '''<br />\n'''
+
+            if (sys_sid == True) or (sys_sid == True):
+                sent_string = escape(sents[sid][2])+'<br />\n'
+                check_gold_html += sent_string
+                check_gold_html += error_type_string
+                check_gold_html += '<br />\n'
+
+        check_gold_html += '''<hr>\n'''
+
+    check_gold_html += '</html>'
+
+    f = codecs.open("check_gold.html", "w", "utf-8")
+    f.write(check_gold_html)
+
+    return render_template("check_gold_result.html")
+
+
 
 @app.route('/allconcepts', methods=['GET', 'POST'])
 def allconcepts():
