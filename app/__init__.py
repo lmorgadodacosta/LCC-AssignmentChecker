@@ -488,19 +488,22 @@ def check_gold():
     ''' show the tags from system and their frequency '''
     sys_tag_freq_heading = '''<h3>Numbers of tags from system</h3>\n'''
     check_gold_html += sys_tag_freq_heading
-    system_tags = dd(int)
+    system_tags = dd(set)
     for docid in error_sys_dic.keys():
         for sid in error_sys_dic[docid].keys():
             for eid in error_sys_dic[docid][sid].keys():
                 tag = error_sys_dic[docid][sid][eid]["label"]
-                system_tags[tag] += 1
-    for tag, occ in sorted(system_tags.items(), key=lambda x:x[1], reverse=True):
+                system_tags[tag].add((docid, sid))
+    tag_freq = set()
+    for tag in system_tags:
+        tag_freq.add((len(system_tags[tag]), tag))
+    for occ, tag in sorted(tag_freq, reverse=True):
         check_gold_html += '''<b>{0}</b>: {1}<br />\n'''.format(tag, occ)
 
     check_gold_html += '<br /><hr>\n'
 
     ''' long sentence and informal words static '''
-    numbers_heading =  '''<h3>Numbers of long sentence and informal words (hastle/tackle)</h3>\n'''
+    numbers_heading =  '''<h3>Numbers of long sentence and informal words</h3>\n'''
     #allover_sents_number = g.gold.execute('''SELECT COUNT(sid) FROM sent WHERE docid IN ('{}')'''.format("', '".join(annotated_docids))).fetchone()[0]
     long_sub_heading = '''<h5>"LongSentence" by System  VS  "SLong" by Annotators</h5>\n'''
     allover_sents_number = g.gold.execute('''SELECT COUNT(sid) FROM sent WHERE docid IN {}'''.format(tuple(annotated_docids))).fetchone()[0]
@@ -532,9 +535,10 @@ def check_gold():
 
     ''' hastle & tackle  '''
     informal_sub_heading = '''<h5>"Informal" by System  VS  "StyWch" by Annotators</h5>\n'''
-    informal_sub_heading += '''<h6>(Target words: "hassle" and "tackle")</h6>\n'''
-    allover_informal_number = g.gold.execute('''SELECT COUNT(word.lemma) FROM word INNER JOIN sent ON word.sid=sent.sid WHERE (word.lemma IN ('hassle', 'tackle')) AND (sent.docid IN {})'''.format(tuple(annotated_docids))).fetchone()[0]
-    allover_informal_string = '''Allover 'hassle's and 'tackle's (in annotated documents): {}<br /><br />\n'''.format(allover_informal_number)
+    #informal_sub_heading += '''<h6>(Target words: "hassle" and "tackle")</h6>\n'''
+    allover_informal_number = g.gold.execute('''SELECT COUNT(word.lemma) FROM word INNER JOIN sent ON word.sid=sent.sid WHERE (word.lemma IN ('hassle', 'tackle','stuff', 'stuffs', 'handy', 'air-con', 'info', 'fantastic', 'humongous', 'cash')) AND (sent.docid IN {})'''.format(tuple(annotated_docids))).fetchone()[0]
+    #allover_informal_string = '''Allover 'hassle's and 'tackle's (in annotated documents): {}<br /><br />\n'''.format(allover_informal_number)
+    allover_informal_string = '''Allover informal words (in annotated documents): {}<br /><br />\n'''.format(allover_informal_number)
     S_and_A_string = '''System and Annotators agrees (informal): {}<br />\n'''.format(len(sys_error2pstn["Informal"] & at_error2pstn["StyWch"]))
     S_only_string = '''System only: {}<br />\n'''.format(len(sys_error2pstn["Informal"] - at_error2pstn["StyWch"]))
     A_only_string = '''Annotators only: {}<br />\n'''.format(len(at_error2pstn["StyWch"] - sys_error2pstn["Informal"]))
@@ -637,12 +641,13 @@ def check_gold():
 
     ''' Other labels (System)'''
     other_sub_heading = '''<h5>Other errors by System</h5>\n'''
-    for label in sorted(sys_error2pstn.keys()):
+    oth_sents = ""
+    for label in sorted(system_tags.keys()):
         if label in set(["LongSentence", "Informal", "Contraction"]):
             continue
         label_heading = '''<h5><b>{}</b></h5>\n'''.format(label)
-        oth_sents = ""
-        for oth in sorted(sys_error2pstn[label]):
+        oth_sents += label_heading
+        for oth in sorted(system_tags[label]):
             oth_sent = g.gold.execute('''SELECT sent FROM sent WHERE sid=?''', (oth[1],)).fetchone()[0]
             oth_sents += escape(oth_sent)
             oth_sents += ''' (docid={0}, orig_sid={1})<br />\n'''.format(oth[0], oth[1])
