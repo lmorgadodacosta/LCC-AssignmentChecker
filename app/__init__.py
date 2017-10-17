@@ -295,7 +295,10 @@ def file2db():
         error_logging.write("DOCNAME: {}\n".format(filename))                         ####tk####
         error_logging.write("Type: {type}\n".format(type=type(e)))               ####tk####
         error_logging.write("Args: {args}\n".format(args=e.args))                ####tk####
-        error_logging.write("Message: {message}\n".format(message=e.message))    ####tk####
+
+        if hasattr(e, 'message'):
+            error_logging.write("Message: {message}\n".format(message=e.message))    ####tk####
+            
         error_logging.write("Error: {error}\n\n".format(error=e))             ####tk####
         error_logging.close()          
         r = False
