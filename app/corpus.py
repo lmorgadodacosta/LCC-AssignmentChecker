@@ -30,6 +30,28 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['STATIC'] = STATIC
 
 
+# CHECK FOR PET PEEVES
+informal_lang = set(['hassle', 'Hassle', 'tackle', 'Tackle'] )
+
+        
+contractions = set(["ain't", "aren't", "can't", "could've", "couldn't", "didn't", "doesn't",
+                    "don't", "gonna", "gotta", "hadn't", "hasn't", "haven't", "he'd", "he'll",
+                    "he's", "how'd", "how'll", "how's", "I'd", "I'll", "I'm", "I've", "isn't",
+                    "it'd", "it'll", "it's", "mayn't", "may've", "mightn't", "might've", "mustn't",
+                    "must've", "needn't", "oughtn't", "shan't", "she'd", "she'll", "she's",
+                    "should've", "shouldn't",  "that'll", "that're", "that's", "that'd", "there'd",
+                    "there're", "there's", "these're", "they'd", "they'll", "they're", "they've",
+                    "this's", "those're", "wasn't", "we'd", "we'll", "we're", "we've", "weren't",
+                    "what'd", "what'll", "what're", "what's", "what've", "when's", "where'd", "where're",
+                    "where's", "where've", "which's", "who'd", "who'll", "who're", "who's", "who've",
+                    "why'd", "why're", "why's", "won't", "would've", "wouldn't", "y'all", "you'd",
+                    "you'll", "you're", "you've"])
+new_contractions = set([])
+for c in contractions:
+    new_contractions.add(c.replace("'","’"))
+contractions = contractions | new_contractions
+
+
 
 with app.app_context():
 
@@ -550,25 +572,7 @@ with app.app_context():
                 doc_eid += 1
 
 
-        # CHECK FOR PET PEEVES
-        informal_lang = ['hassle', 'Hassle', 'tackle', 'Tackle'] 
-
-        
-        contractions = ["ain't", "aren't", "can't", "could've", "couldn't", "didn't", "doesn't",
-                        "don't", "gonna", "gotta", "hadn't", "hasn't", "haven't", "he'd", "he'll",
-                        "he's", "how'd", "how'll", "how's", "I'd", "I'll", "I'm", "I've", "isn't",
-                        "it'd", "it'll", "it's", "mayn't", "may've", "mightn't", "might've", "mustn't",
-                        "must've", "needn't", "oughtn't", "shan't", "she'd", "she'll", "she's",
-                        "should've", "shouldn't",  "that'll", "that're", "that's", "that'd", "there'd",
-                        "there're", "there's", "these're", "they'd", "they'll", "they're", "they've",
-                        "this's", "those're", "wasn't", "we'd", "we'll", "we're", "we've", "weren't",
-                        "what'd", "what'll", "what're", "what's", "what've", "when's", "where'd", "where're",
-                        "where's", "where've", "which's", "who'd", "who'll", "who're", "who's", "who've",
-                        "why'd", "why're", "why's", "won't", "would've", "wouldn't", "y'all", "you'd",
-                        "you'll", "you're", "you've"]
-
-        # FIXME, contractions need to be checked on sentence; also multiple ' ’
-
+    
 
         # LMC FIXME!, it seems that lemmatizer doesn't work well when it thinks it's a proper noun. 
         # I added the capitalised forms by hand for now  
@@ -580,9 +584,9 @@ with app.app_context():
                     doc_eid += 1
 
 
-                if words[sid][wid][2] in contractions: #FIXME, see above
-
-                    onsite_error[sid][doc_eid] = {"confidence": 5, "position": str(wid), "string": words[sid][wid][2], "label": "Contraction"}
+            for c in contractions: #FIXME
+                if c in sents[sid][2]:
+                    onsite_error[sid][doc_eid] = {"confidence": 5, "position": str(wid), "string": c, "label": "Contraction"}
                     doc_eid += 1
 
 
@@ -631,10 +635,11 @@ with app.app_context():
                     mrs = erg_parse.result(0).mrs()
                     
                     # CHECKING NON-PROPOSIITONS (mood)
-                    if 'prop' not in mrs.properties(mrs.index)['SF']:
+                    sf = mrs.properties(mrs.index)['SF']
+                    if 'prop' not in sf:
 
                         # print('non proposition:', mrs.properties(mrs.index)['SF'])
-                        onsite_error[sid][doc_eid] = {"confidence": 5, "position": "all", "string": None, "label": "NonProp"}
+                        onsite_error[sid][doc_eid] = {"confidence": 5, "position": "all", "string": None, "label": sf }
                         doc_eid += 1
 
                     
