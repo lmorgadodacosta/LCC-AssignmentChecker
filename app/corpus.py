@@ -31,8 +31,6 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['STATIC'] = STATIC
 
 
-
-
 # CHECK FOR PET PEEVES
 wordcheck = dd(list)
 wordcheck['Informal'] = set(['hassle', 'Hassle', 'tackle', 'Tackle'])
@@ -590,6 +588,8 @@ with app.app_context():
         doc_eid = 0
         onsite_error = dd(lambda: dd(dict))
 
+        f = open("erg+mal_result.txt", "a")
+
         threshold = 40
         for sid in words.keys():
             if len(list(words[sid].keys())) >= threshold:
@@ -665,7 +665,7 @@ with app.app_context():
                         
                         # for tag in rbst_tags:
                         for tag, string in rbst_tags:
-                            
+                            f.write(str(docid)+"\t"+str(sid)+"\t"+str(doc_eid)+"\t10\tall\t"+string+"\t"+tag+"\n")
                             onsite_error[sid][doc_eid] = {"confidence": 10, "position": "all", "string": string, "label": tag}
                             doc_eid += 1
 
@@ -674,19 +674,29 @@ with app.app_context():
                         
                     else: # only a general NoParse tag can be given
                         onsite_error[sid][doc_eid] = {"confidence": 5, "position": "all", "string": None, "label": "NoParse"}
+                        f.write(str(docid)+"\t"+str(sid)+"\t"+str(doc_eid)+"\t5\tall\tNNON\tNoParse\n")
                         doc_eid += 1
 
 
                 
                 else: # If the sentence is grammatical, perform other checks (e.g. mood)
-                    mrs = erg_parse.result(0).mrs()
+                    mrs_error_logging = open("mrs_error_log", "a")
+                    try:
+                        mrs = erg_parse.result(0).mrs()
                     
-                    # CHECKING NON-PROPOSIITONS (mood)
-                    sf = mrs.properties(mrs.index)['SF']
+                        # CHECKING NON-PROPOSIITONS (mood)
+                        sf = mrs.properties(mrs.index)['SF']
+                    except:
+                        sf = []
+                        tm = datetime.datetime.now()
+                        mrs_error_logging.write('''{0}\tdocid:{1}\tsid={2}\n'''.format(tm.strftime('%Y-%m-%d_%H:%M:%S'), docid, sid))
+                        mrs_error_logging.close()
+
                     if 'prop' not in sf:
 
                         # print('non proposition:', mrs.properties(mrs.index)['SF'])
                         onsite_error[sid][doc_eid] = {"confidence": 5, "position": "all", "string": None, "label": sf }
+                        f.write(str(docid)+"\t"+str(sid)+"\t"+str(doc_eid)+"\t5\tall\tNNON\t"+sf+"\n")
                         doc_eid += 1
 
                     

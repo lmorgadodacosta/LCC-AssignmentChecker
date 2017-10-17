@@ -255,21 +255,18 @@ def teardown_request(exception):
 
 
 
-@app.route("/_docx2html_exception")
-def docx2html_exception():
-    return render_template("exception.html")
 
 @app.route('/_file2db', methods=['GET', 'POST'])
 @login_required(role=0, group='open')
 def file2db():
 
-    def current_time():                        ####tk####
-        '''   2017-8-17  14:35    '''          ####tk####
-        d = datetime.datetime.now()             ####tk####
-        return d.strftime('%Y-%m-%d_%H:%M:%S')  ####tk####
+    def current_time():
+        '''   2017-8-17  14:35    '''
+        d = datetime.datetime.now()
+        return d.strftime('%Y-%m-%d_%H:%M:%S')
 
 
-    error_logging = open("corpus_inputting_error_log", "a")#, "utf-8")    ####tk####
+    error_logging = open("corpus_inputting_error_log", "a")
 
 
     filename = request.args.get('fn', None)
@@ -385,49 +382,91 @@ def projectadmin():
     projs = fetch_proj()
     return render_template("projectadmin.html", projs=projs)
 
+
+sys_tag_dic = {}
+sys_tag_dic["LongSentence"] = ""
+sys_tag_dic["InformalWord"] = ""
+sys_tag_dic["Contraction"] = ""
+sys_tag_dic["NoParse"] = ""
+
+def tag2text(tag):
+    if tag in sys_tag_dic:
+        return sys_tag_dic[tag]
+    else:
+        return "Another kinds of error"
+
 @app.route("/check_gold",methods=["GET"])
 def check_gold():
+    maxgold=274
     error_sys_dic = {}
-    for docid in range(1, 274):
+    for docid in range(1, maxgold):  # range(1, 274)
         error_sys_dic[docid] = check_doc(docid, "gold")
 
     annotated_docids = [did[0] for did in g.gold.execute("SELECT DISTINCT docid FROM sent WHERE comment IS NOT '' ORDER BY docid")]
 
 
-    ''' extract "LongSentence" and "InformalWord" from error_sys_dic '''
-    sys_long_set = set()
-    sys_informal_set = set()
+    ''' extract "LongSentence" and "Informal" from error_sys_dic '''
+    #sys_long_set = set()
+    #sys_informal_set = set()
+    sys_error2pstn = dd(set)
     for docid in annotated_docids:
         if not docid in error_sys_dic.keys():
             continue
         for sid in error_sys_dic[docid].keys():
             for eid in error_sys_dic[docid][sid].keys():
                 if error_sys_dic[docid][sid][eid]["label"] == "LongSentence":
-                    sys_long_set.add((docid, sid))
-                elif error_sys_dic[docid][sid][eid]["label"] == "InformalWord":
+                    #sys_long_set.add((docid, sid))
+                    sys_error2pstn["LongSentence"].add((docid, sid))
+                elif error_sys_dic[docid][sid][eid]["label"] == "VeryLongSentence":
+                    sys_error2pstn["LongSentence"].add((docid, sid))
+                elif error_sys_dic[docid][sid][eid]["label"] == "Informal":
                     pstn = int(error_sys_dic[docid][sid][eid]["position"])
-                    sys_informal_set.add((docid, sid, pstn))
+                    #sys_informal_set.add((docid, sid, pstn))
+                    sys_error2pstn["Informal"].add((docid, sid, pstn))
+                elif error_sys_dic[docid][sid][eid]["label"] == "Contraction":  # put "position" info if you have word id or something 
+                    sys_error2pstn["Contraction"].add((docid, sid))
+                elif error_sys_dic[docid][sid][eid]["label"] in set(["comm", "ques"]):
+                    sys_error2pstn["commques"].add((docid, sid))
+                else:
+                    label = error_sys_dic[docid][sid][eid]["label"]
+                    sys_error2pstn[label].add((docid, sid))
+
 
     ''' extract data from gold corpus '''
     at_label_dic = dd(lambda: dd(lambda: dd(set)))
-    at_long_set = set()
-    at_informal_set = set()
+    #at_long_set = set()
+    #at_informal_set = set()
+    at_error2pstn = dd(set)
     for docid, sid, label in g.gold.execute("SELECT sent.docid, sent.sid, error.label FROM sent INNER JOIN error ON sent.sid=error.sid").fetchall():
         if label == "SLong":
             at_label_dic[docid][sid][label].add("all")
-            at_long_set.add((docid, sid))
+            #at_long_set.add((docid, sid))
+            at_error2pstn["SLong"].add((docid, sid))
         elif label == "StyWch":
             for eid, in g.gold.execute('''SELECT eid FROM error WHERE label='StyWch' AND sid=?''', (sid,)).fetchall():
                 for wid, in g.gold.execute('''SELECT wid FROM ewl WHERE sid=? AND eid=?''', (sid, eid)).fetchall():
-                    for lemma, in g.gold.execute('''SELECT lemma FROM word WHERE sid=? AND wid=?''', (sid, wid)).fetchall():
-                        if lemma in ['hassle', 'tackle']:
-                            at_label_dic[docid][sid][label].add(wid)
-                            at_informal_set.add((docid, sid, wid))
-                        else:
-                            at_label_dic[docid][sid]["ANY"].add(label)
+                    at_label_dic[docid][sid][label].add(wid)
+                    at_error2pstn["StyWch"].add((docid, sid, wid))
 
+                    # for lemma, in g.gold.execute('''SELECT lemma FROM word WHERE sid=? AND wid=?''', (sid, wid)).fetchall():
+                    #     if lemma in ['hassle', 'tackle']:
+                    #         at_label_dic[docid][sid][label].add(wid)
+                    #         #at_informal_set.add((docid, sid, wid))
+                    #         at_error2pstn["StyWch(hassle/tackle)"].add((docid, sid, wid))
+                    #     else:
+                    #         at_label_dic[docid][sid][label].add("all")
+
+                            # at_error2pstn[label].add((docid, sid))
+        elif label == "StyContr":
+            at_label_dic[docid][sid][label].add(wid)
+            at_error2pstn["StyContr"].add((docid, sid))
+        elif label == "StyMood":
+            at_label_dic[docid][sid][label].add("all")
+            at_error2pstn["StyMood"].add((docid, sid))
         else:
-            at_label_dic[docid][sid]["ANY"].add(label)
+            at_label_dic[docid][sid][label].add("all")
+            
+            at_error2pstn[label].add((docid, sid))
 
     #print(sys_informal_set)
     #print(at_informal_set)
@@ -446,36 +485,183 @@ def check_gold():
     check_gold_html += html_head
     check_gold_html += '''<hr>\n'''
 
+    ''' show the tags from system and their frequency '''
+    sys_tag_freq_heading = '''<h3>Numbers of tags from system</h3>\n'''
+    check_gold_html += sys_tag_freq_heading
+    system_tags = dd(int)
+    for docid in error_sys_dic.keys():
+        for sid in error_sys_dic[docid].keys():
+            for eid in error_sys_dic[docid][sid].keys():
+                tag = error_sys_dic[docid][sid][eid]["label"]
+                system_tags[tag] += 1
+    for tag, occ in sorted(system_tags.items(), key=lambda x:x[1], reverse=True):
+        check_gold_html += '''<b>{0}</b>: {1}<br />\n'''.format(tag, occ)
+
+    check_gold_html += '<br /><hr>\n'
+
     ''' long sentence and informal words static '''
     numbers_heading =  '''<h3>Numbers of long sentence and informal words (hastle/tackle)</h3>\n'''
     #allover_sents_number = g.gold.execute('''SELECT COUNT(sid) FROM sent WHERE docid IN ('{}')'''.format("', '".join(annotated_docids))).fetchone()[0]
+    long_sub_heading = '''<h5>"LongSentence" by System  VS  "SLong" by Annotators</h5>\n'''
     allover_sents_number = g.gold.execute('''SELECT COUNT(sid) FROM sent WHERE docid IN {}'''.format(tuple(annotated_docids))).fetchone()[0]
     allover_sents_string = '''Allover sentences (in annotated documents): {}<br /><br />\n'''.format(allover_sents_number)
-    S_and_A_string = '''System and Annotatos agrees (long sentence): {}<br />\n'''.format(len(sys_long_set & at_long_set))
-    S_only_string = '''System only: {}<br />\n'''.format(len(sys_long_set - at_long_set))
-    A_only_string = '''Annotators only: {}<br />\n'''.format(len(at_long_set - sys_long_set))
-    N_string = '''Non of them: {}<br /><br />\n\n'''.format(allover_sents_number - len(sys_long_set | at_long_set))
+    S_and_A_string = '''System and Annotators agrees (long sentence): {}<br />\n'''.format(len(sys_error2pstn["LongSentence"] & at_error2pstn["SLong"]))
+    S_only_string = '''System only: {}<br />\n'''.format(len(sys_error2pstn["LongSentence"] - at_error2pstn["SLong"]))
+    A_only_string = '''Annotators only: {}<br />\n'''.format(len(at_error2pstn["SLong"] - sys_error2pstn["LongSentence"]))
+    N_string = '''Non of them: {}<br /><br />\n\n'''.format(allover_sents_number - len(sys_error2pstn["LongSentence"] | at_error2pstn["SLong"]))
     
-    long_static_string = numbers_heading+allover_sents_string+S_and_A_string+S_only_string+A_only_string+N_string+'''<br /><br />\n'''
+    
+    long_sents = '''<h5>Actual sentences</h5>\n'''
+    long_sents += '''<b>System and Annotators agree:</b><br /><br />\n''' 
+    for lg in sorted(sys_error2pstn["LongSentence"]&at_error2pstn["SLong"]):
+        lg_sent = g.gold.execute('''SELECT sent FROM sent WHERE sid=?''', (lg[1],)).fetchone()[0]
+        long_sents += escape(lg_sent)
+        long_sents += ''' (docid={})'''.format(lg[0])
+        long_sents += '<br /><br />\n'
+    long_sents += '''<b>System only:</b><br /><br />\n''' 
+    for lg in sorted(sys_error2pstn["LongSentence"] - at_error2pstn["SLong"]):
+        lg_sent = g.gold.execute('''SELECT sent FROM sent WHERE sid=?''', (lg[1],)).fetchone()[0]
+        long_sents += escape(lg_sent)
+        long_sents += ''' (docid={})'''.format(lg[0])
+        long_sents += '<br /><br />\n'
+
+    
+    long_static_string = numbers_heading+long_sub_heading+allover_sents_string+S_and_A_string+S_only_string+A_only_string+N_string+long_sents+'''<br /><br />\n'''
+
     check_gold_html += long_static_string
 
     ''' hastle & tackle  '''
+    informal_sub_heading = '''<h5>"Informal" by System  VS  "StyWch" by Annotators</h5>\n'''
+    informal_sub_heading += '''<h6>(Target words: "hassle" and "tackle")</h6>\n'''
     allover_informal_number = g.gold.execute('''SELECT COUNT(word.lemma) FROM word INNER JOIN sent ON word.sid=sent.sid WHERE (word.lemma IN ('hassle', 'tackle')) AND (sent.docid IN {})'''.format(tuple(annotated_docids))).fetchone()[0]
     allover_informal_string = '''Allover 'hassle's and 'tackle's (in annotated documents): {}<br /><br />\n'''.format(allover_informal_number)
-    S_and_A_string = '''System and Annotatos agrees (informal): {}<br />\n'''.format(len(sys_informal_set & at_informal_set))
-    S_only_string = '''System only: {}<br />\n'''.format(len(sys_informal_set - at_informal_set))
-    A_only_string = '''Annotators only: {}<br />\n'''.format(len(at_informal_set - sys_informal_set))
-    N_string = '''Non of them: {}<br /><br />\n\n'''.format(allover_informal_number - len(sys_informal_set | at_informal_set))
+    S_and_A_string = '''System and Annotators agrees (informal): {}<br />\n'''.format(len(sys_error2pstn["Informal"] & at_error2pstn["StyWch"]))
+    S_only_string = '''System only: {}<br />\n'''.format(len(sys_error2pstn["Informal"] - at_error2pstn["StyWch"]))
+    A_only_string = '''Annotators only: {}<br />\n'''.format(len(at_error2pstn["StyWch"] - sys_error2pstn["Informal"]))
+    N_string = '''Non of them: {}<br /><br />\n\n'''.format(allover_informal_number - len(sys_error2pstn["Informal"] | at_error2pstn["StyWch"]))
 
-    informal_static_string = allover_informal_string+S_and_A_string+S_only_string+A_only_string+N_string+'''<br /><hr>\n\n'''
+    informal_sents = '''<h5>Actual sentences</h5>\n'''
+    informal_sents += '''<b>System and Annotators agree:</b><br /><br />\n''' 
+    for ifr in sorted(sys_error2pstn["Informal"]&at_error2pstn["StyWch"]):
+        ifr_sent = g.gold.execute('''SELECT sent FROM sent WHERE sid=?''', (ifr[1],)).fetchone()[0]
+        informal_sents += escape(ifr_sent)
+        informal_sents += ''' (docid={})'''.format(ifr[0])
+        informal_sents += '<br /><br />\n'
+    informal_sents += '''<b>System only:</b><br /><br />\n'''
+    for ifr in sorted(sys_error2pstn["Informal"] - at_error2pstn["StyWch"]):
+        ifr_sent = g.gold.execute('''SELECT sent FROM sent WHERE sid=?''', (ifr[1],)).fetchone()[0]
+        informal_sents += escape(ifr_sent)
+        informal_sents += ''' (docid={})'''.format(ifr[0])
+        informal_sents += '<br /><br />\n'
+
+
+
+    informal_static_string = informal_sub_heading+allover_informal_string+S_and_A_string+S_only_string+A_only_string+N_string+informal_sents+'''<br /><hr>\n\n'''
     check_gold_html += informal_static_string
 
+
+    ''' Contractions '''
+    contraction_sub_heading = '''<h5>"Contraction" by System  VS  "StyContr" by Annotators</h5>\n'''
+    # allover_sents_string can be used here.
+    S_and_A_string = '''System and Annotators agrees: {}<br />\n'''.format(len(sys_error2pstn["Contraction"] & at_error2pstn["StyContr"]))
+    S_only_string = '''System only: {}<br />\n'''.format(len(sys_error2pstn["Contraction"] - at_error2pstn["StyContr"]))
+    A_only_string = '''Annotators only: {}<br />\n'''.format(len(at_error2pstn["StyContr"] - sys_error2pstn["Contraction"]))
+    N_string = '''Non of them: {}<br /><br />\n\n'''.format(allover_informal_number - len(sys_error2pstn["Contraction"] | at_error2pstn["StyContr"]))
+
+    contraction_sents = '''<h5>Actual sentences</h5>\n'''
+    contraction_sents += '''<b>System and Annotators agree:</b><br /><br />\n'''
+    for cnt in sorted(sys_error2pstn["Contraction"]&at_error2pstn["StyContr"]):
+        cnt_sent = g.gold.execute('''SELECT sent FROM sent WHERE sid=?''', (cnt[1],)).fetchone()[0]
+        contraction_sents += escape(cnt_sent)
+        contraction_sents += ''' (docid={})'''.format(cnt[0])
+        contraction_sents += '<br /><br />\n'
+    contraction_sents += '''<b>System only:</b><br /><br />\n'''
+    for cnt in sorted(sys_error2pstn["Contraction"] - at_error2pstn["StyContr"]):
+        cnt_sent = g.gold.execute('''SELECT sent FROM sent WHERE sid=?''', (cnt[1],)).fetchone()[0]
+        contraction_sents += escape(cnt_sent)
+        contraction_sents += ''' (docid={})'''.format(cnt[0])
+        contraction_sents += '<br /><br />\n'
+    contraction_sents += '''<b>Annotators only:</b><br /><br />\n'''
+    for cnt in sorted(at_error2pstn["StyContr"] - sys_error2pstn["Contraction"]):
+        cnt_sent = g.gold.execute('''SELECT sent FROM sent WHERE sid=?''', (cnt[1],)).fetchone()[0]
+        contraction_sents += escape(cnt_sent)
+        contraction_sents += ''' (docid={})'''.format(cnt[0])
+        contraction_sents += '<br /><br />\n'
+    contraction_sents += '''<b>None of them:</b><br /><br />\n'''
+    for cnt in sorted(sys_error2pstn["Contraction"] | at_error2pstn["StyContr"]):
+        cnt_sent = g.gold.execute('''SELECT sent FROM sent WHERE sid=?''', (cnt[1],)).fetchone()[0]
+        contraction_sents += escape(cnt_sent)
+        contraction_sents += ''' (docid={})'''.format(cnt[0])
+        contraction_sents += '<br /><br />\n'
+
+    contraction_static_string = contraction_sub_heading+allover_sents_string+S_and_A_string+S_only_string+A_only_string+N_string+contraction_sents+'''<br /><hr>\n\n'''
+    check_gold_html += contraction_static_string
+
+    ''' Mood '''
+    mood_sub_heading = '''<h5>"comm" and "ques" by System  VS  "StyMood" by Annotators</h5>\n'''
+    # allover_sents_string can be used here.
+    S_and_A_string = '''System and Annotators agrees: {}<br />\n'''.format(len(sys_error2pstn["commques"] & at_error2pstn["StyMood"]))
+    S_only_string = '''System only: {}<br />\n'''.format(len(sys_error2pstn["commques"] - at_error2pstn["StyMood"]))
+    A_only_string = '''Annotators only: {}<br />\n'''.format(len(at_error2pstn["StyMood"] - sys_error2pstn["commques"]))
+    N_string = '''Non of them: {}<br /><br />\n\n'''.format(allover_informal_number - len(sys_error2pstn["commques"] | at_error2pstn["StyMood"]))
+
+    mood_sents = '''<h5>Actual sentences</h5>\n'''
+    mood_sents += '''<b>System and Annotators agree:</b><br /><br />\n'''
+    for md in sorted(sys_error2pstn["commques"]&at_error2pstn["StyMood"]):
+        md_sent = g.gold.execute('''SELECT sent FROM sent WHERE sid=?''', (md[1],)).fetchone()[0]
+        mood_sents += escape(md_sent)
+        mood_sents += ''' (docid={})'''.format(md[0])
+        mood_sents += '<br /><br />\n'
+    mood_sents += '''<b>System only:</b><br /><br />\n'''
+    for md in sorted(sys_error2pstn["commques"] - at_error2pstn["StyMood"]):
+        md_sent = g.gold.execute('''SELECT sent FROM sent WHERE sid=?''', (md[1],)).fetchone()[0]
+        mood_sents += escape(md_sent)
+        mood_sents += ''' (docid={})'''.format(md[0])
+        mood_sents += '<br /><br />\n'
+    mood_sents += '''<b>Annotators only:</b><br /><br />\n'''
+    for md in sorted(at_error2pstn["StyMood"] - sys_error2pstn["commques"]):
+        md_sent = g.gold.execute('''SELECT sent FROM sent WHERE sid=?''', (md[1],)).fetchone()[0]
+        mood_sents += escape(md_sent)
+        mood_sents += ''' (docid={})'''.format(md[0])
+        mood_sents += '<br />\n'
+    mood_sents += '''<b>None of them:</b><br /><br />\n'''
+    for md in sorted(sys_error2pstn["commques"] | at_error2pstn["StyMood"]):
+        md_sent = g.gold.execute('''SELECT sent FROM sent WHERE sid=?''', (md[1],)).fetchone()[0]
+        mood_sents += escape(md_sent)
+        mood_sents += ''' (docid={})'''.format(md[0])
+        mood_sents += '<br />\n'
+
+    mood_static_string = mood_sub_heading+allover_sents_string+S_and_A_string+S_only_string+A_only_string+N_string+mood_sents+'''<br /><hr>\n\n'''
+    check_gold_html += mood_static_string
+
+
+    ''' Other labels (System)'''
+    other_sub_heading = '''<h5>Other errors by System</h5>\n'''
+    for label in sorted(sys_error2pstn.keys()):
+        if label in set(["LongSentence", "Informal", "Contraction"]):
+            continue
+        label_heading = '''<h5><b>{}</b></h5>\n'''.format(label)
+        oth_sents = ""
+        for oth in sorted(sys_error2pstn[label]):
+            oth_sent = g.gold.execute('''SELECT sent FROM sent WHERE sid=?''', (oth[1],)).fetchone()[0]
+            oth_sents += escape(oth_sent)
+            oth_sents += ''' (docid={0}, orig_sid={1})<br />\n'''.format(oth[0], oth[1])
+            oth_sents += '''&nbsp;&nbsp;Annotator(s):  '''
+            if len(at_label_dic[oth[0]][oth[1]].keys()) > 0:
+                for at_label in at_label_dic[oth[0]][oth[1]].keys():
+                    oth_sents += '''{}; '''.format(at_label)
+            else:
+                oth_sents += '''None'''
+            oth_sents += '<br /><br />\n'
+
+    oth_static_string = other_sub_heading+label_heading+oth_sents+'''<br /><hr>\n\n'''
+    check_gold_html += oth_static_string
 
     ''' sents with error '''
     s_e_heading = '''<h3>Sentences with error</h3><br />\n'''
     check_gold_html += s_e_heading
 
-    for docid in range(1, 274):    # range(1, 274)
+    for docid in range(1, maxgold):    # range(1, 274)
         sys_docid = False
         at_docid = False
         if (not docid in error_sys_dic.keys()) and (not docid in at_label_dic.keys()):
@@ -517,10 +703,27 @@ def check_gold():
 
                     if "LongSentence" in sys_errors:
                         error_type_string += '''<font color="red">LongSentence</font>; '''
-                    if "InformalWord" in sys_errors:
-                        error_type_string += '''<font color="orange">InformalWord</font>; '''
+                        sys_errors.remove("LongSentence")
+                    if "VeryLongSentence" in sys_errors:
+                        error_type_string += '''<font color="red">VeryLongSentence</font>; '''
+                        sys_errors.remove("VeryLongSentence")
+                    if "Informal" in sys_errors:
+                        error_type_string += '''<font color="orange">Informal</font>; '''
+                        sys_errors.remove("Informal")
+                    if "Contraction" in sys_errors:
+                        error_type_string += '''<font color="blue">Contraction</font>; '''
+                        sys_errors.remove("Contraction")
                     if "NoParse" in sys_errors:
                         error_type_string += '''<font color="green">NoParse</font>; '''
+                        sys_errors.remove("NoParse")
+                    if "comm" in sys_errors:
+                        error_type_string += '''<font color="pink">comm</font>; '''
+                        sys_errors.remove("comm")
+                    if "ques" in sys_errors:
+                        error_type_string += '''<font color="pink">ques</font>; '''
+                        sys_errors.remove("ques")
+                    for sys_error in sorted(sys_errors):
+                        error_type_string += '''{}; '''.format(sys_error)
 
                     error_type_string += '''<br />\n'''
 
@@ -529,14 +732,26 @@ def check_gold():
                 if sid in at_label_dic[docid].keys():
                     at_sid = True
                     error_type_string += "&nbsp;&nbsp;Annotator(s): "
-                    if "SLong" in at_label_dic[docid][sid].keys():
+                    at_labels = [atl for atl in at_label_dic[docid][sid].keys()]
+                    if "SLong" in at_labels:
                         error_type_string += '''<font color="red">SLong</font>; '''
-                    if "StyWch" in at_label_dic[docid][sid].keys():
-                        error_type_string += '''<font color="orange">StyWch(hassle/tackle)</font>; '''
-                    if "ANY" in at_label_dic[docid][sid].keys():
-                        any_labels = sorted([lb for lb in at_label_dic[docid][sid]["ANY"]])
-                        for any_label in any_labels:
-                            error_type_string += '''{}; '''.format(any_label)
+                        at_labels.remove("SLong")
+                    if "StyWch" in at_labels:
+                        error_type_string += '''<font color="orange">StyWch</font>; '''
+                        at_labels.remove("StyWch")
+                    if "StyContr" in at_labels:
+                        error_type_string += '''<font color="blue">StyContr</font>; '''
+                        at_labels.remove("StyContr")
+                    if "StyMood" in at_labels:
+                        error_type_string += '''<font color="pink">StyMood</font>; '''
+                        at_labels.remove("StyMood")
+                    #if "ANY" in at_label_dic[docid][sid].keys():
+                    #    any_labels = sorted([lb for lb in at_label_dic[docid][sid]["ANY"]])
+                    #    for any_label in any_labels:
+                    #        error_type_string += '''{}; '''.format(any_label)
+                    for at_label in sorted(at_labels):
+                        error_type_string += '''{}; '''.format(at_label)
+
 
                     error_type_string += '''<br />\n'''
 
