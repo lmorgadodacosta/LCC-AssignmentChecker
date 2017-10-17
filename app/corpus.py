@@ -33,8 +33,13 @@ app.config['STATIC'] = STATIC
 
 # CHECK FOR PET PEEVES
 wordcheck = dd(list)
-wordcheck['Informal'] = set(['hassle', 'Hassle', 'tackle', 'Tackle'])
-# informal_lang = set(['hassle', 'Hassle', 'tackle', 'Tackle'])
+
+# Wordcheck is checked at lemma level (important for verbs)
+wordcheck['Informal'] = set(['hassle', 'tackle', 'stuff', 'stuffs', 'handy', 'air-con', 'info', 'fantastic', 'humongous', 'cash'])
+
+wordchoice = set(["I would like to say","to wrap up","come up with","handy","total waste of time","come into play",
+                  "without further ado", "tons of","to make things worse,","fork out"])
+
 
 wordcheck['Formal'] = set(['whereby', 'aforementioned'])
 
@@ -57,6 +62,33 @@ new_contractions = set([])
 for c in contractions:
     new_contractions.add(c.replace("'","’"))
 contractions = contractions | new_contractions
+
+wordcase_ntu = set(["Executive Committee", "Student Services Center", "Jurong East", "NTU", "Student Union", "Computer Science","Google","Singaporeans",
+                "Singapore","School of Engineering","Nanyang Techonological University","MRT"])
+months = set(["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"])
+places = set(["Alexandra", "Aljunied", "Geylang", "Ayer Rajah", "Balestier", "Bartley", "Bishan", "Marymount", "Sin Ming", "Bukit Timah", "Sixth Avenue",
+              "Buona Vista", "Holland Village", "One North", "Ghim Moh", "Chinatown", "Clarke Quay", "Kreta Ayer", "Telok Ayer", "Kallang", "Bendemeer",
+              "Geylang Bahru", "Kallang Bahru", "Kallang Basin", "Kolam Ayer", "Tanjong Rhu", "Mountbatten", "Old Airport", "Lavender", "Boon Keng",
+              "Kent Ridge", "Kim Seng", "Little India", "Farrer Park", "Jalan Besar", "MacPherson", "Marina Bay", "Esplanade", "Marina Bay Sands",
+              "Marina Centre", "Marina East", "Marina South", "Mount Faber", "Mount Vernon", "Museum", "Newton", "Novena", "Orchard Road", "Dhoby Ghaut",
+              "Emerald Hill", "Peranakan Place", "Tanglin", "Outram", "Pasir Panjang", "Paya Lebar", "Eunos", "Geylang East", "Potong Pasir",
+              "Rochor-Kampong Glam", "Bencoolen", "Bras Basah", "Bugis", "Queenstown", "Dover", "Commonwealth", "Raffles Place", "River Valley",
+              "Singapore River", "Southern Islands", "Tanjong Pagar", "Shenton Way", "Telok Blangah", "Bukit Chandu", "Bukit Purmei", "HarbourFront",
+              "Keppel", "Radin Mas", "Mount Faber", "Tiong Bahru", "Bukit Ho Swee", "Bukit Merah", "Toa Payoh", "Bukit Brown", "Caldecott Hill",
+              "Thomson", "Whampoa", "St. Michael's", "Bedok", "Bedok Reservoir", "Chai Chee", "Kaki Bukit", "Tanah Merah", "Changi", "Changi Bay",
+              "Changi East", "Changi Village", "East Coast", "Joo Chiat", "Katong", "Kembangan", "Pasir Ris", "Elias", "Lorong Halus", "Loyang",
+              "Marine Parade", "Siglap", "Tampines", "Simei", "Ubi", "Central Catchment Nature Reserve", "Kranji", "Lentor", "Lim Chu Kang",
+              "Neo Tiew", "Sungei Gedong", "Mandai", "Sembawang", "Canberra", "Senoko", "Simpang", "Sungei Kadut", "Woodlands", "Admiralty", "Innova",
+              "Marsiling", "Woodgrove", "Yishun", "Chong Pang", "Ang Mo Kio", "Cheng San", "Chong Boon", "Kebun Baru", "Teck Ghee", "Yio Chu Kang",
+              "Bidadari", "Hougang", "Defu", "Kovan", "Lorong Chuan", "North-Eastern Islands", "Punggol", "Punggol Point", "Punggol New Town",
+              "Seletar", "Sengkang", "Serangoon", "Serangoon Gardens", "Serangoon North", "Boon Lay", "Tukang", "Liu Fang", "Samulun", "Shipyard",
+              "Bukit Batok", "Bukit Gombak", "Hillview", "Guilin", "West", "East", "Bukit Panjang", "Choa Chu Kang", "Yew Tee", "Clementi", "Toh Tuck",
+              "West Coast", "Jurong East", "Toh Guan", "International Business Park", "Teban Gardens", "Pandan Gardens", "Penjuru", "Yuhua",
+              "Jurong Regional Centre", "Lake", "River", "Port", "Jurong West", "Hong Kah", "Taman Jurong", "Boon Lay Place", "Chin Bee", "Yunnan",
+              "Kian Teck", "Safti", "Wenya", "Lim Chu Kang", "Pioneer", "Joo Koon", "Gul Circle", "Pioneer Sector", "Tengah", "Tuas", "Wrexham", "Promenade",
+              "Pioneer", "Soon Lee", "Tuas South", "Western Islands Planning Area", "Western Water Catchment", "Murai", "Sarimbun"])
+wordcase = wordcase_ntu | months | places
+
 
 
 def checkd(obj,errors):
@@ -587,21 +619,24 @@ with app.app_context():
 
         doc_eid = 0
         onsite_error = dd(lambda: dd(dict))
-
+        
         f = open("erg+mal_result.txt", "a")
 
-        threshold = 40
-        for sid in words.keys():
-            if len(list(words[sid].keys())) >= threshold:
+        seriousthreshold = 40
+        mildthreshold = 30
 
-                onsite_error[sid][doc_eid] = {"confidence": 10, "position": "all", "string": None, "label": "LongSentence"}
+        for sid in words.keys():
+            sentlen = len(list(words[sid].keys()))
+            if sentlen >= seriousthreshold:
+
+                onsite_error[sid][doc_eid] = {"confidence": 10, "position": "all", "string": None, "label": "VeryLongSentence"}
                 doc_eid += 1
 
+            elif sentlen >= mildthreshold:
+                onsite_error[sid][doc_eid] = {"confidence": 5, "position": "all", "string": None, "label": "LongSentence"}
+                doc_eid += 1
 
-    
-
-        # LMC FIXME!, it seems that lemmatizer doesn't work well when it thinks it's a proper noun. 
-        # I added the capitalised forms by hand for now  
+                
         for sid in words.keys():
             for wid in words[sid].keys():
 
@@ -614,25 +649,37 @@ with app.app_context():
                         doc_eid += 1
                     
                 
-                # Checking for lemma based checks
+                # Lemma checks in wordcheck
                 for check in wordcheck:
                     if lemma in wordcheck[check]:
                         onsite_error[sid][doc_eid] = {"confidence": 10, "position": str(wid), "string": lemma, "label": check}
                         doc_eid += 1
                         
 
-                    
-            # SENTENCE CHECKS
+            ################################        
+            # SENTENCE-LEVEL CHECKS
+            ################################
+
+            # Contractions
             for c in contractions:
                 if re.search(r'\b{}\b'.format(c), sents[sid][2], re.IGNORECASE):
                     # if c in sents[sid][2]:
-                    onsite_error[sid][doc_eid] = {"confidence": 10, "position": str(wid), "string": c, "label": "Contraction"}
+                    onsite_error[sid][doc_eid] = {"confidence": 10, "position": "all", "string": c, "label": "Contraction"}
                     doc_eid += 1
 
-
-
-
-        
+            # Word Case
+            for exp in wordcase:
+                if re.search(r'\b{}\b'.format(exp), sents[sid][2], re.IGNORECASE) and (re.search(r'\b{}\b'.format(exp), sents[sid][2], re.IGNORECASE).group() != exp):
+                    onsite_error[sid][doc_eid] = {"confidence": 5, "position": "all", "string": exp, "label": "WordCase"}
+                    doc_eid += 1
+                    
+            # Word Choice (style)
+            for exp in wordchoice:
+                if re.search(r'\b{}\b'.format(exp), sents[sid][2], re.IGNORECASE):
+                    onsite_error[sid][doc_eid] = {"confidence": 5, "position": "all", "string": exp, "label": "WordChoice"}
+                    doc_eid += 1
+            
+                    
 
         # USE ACE TO CHECK PARSES FOR EACH SENTENCE
         with ace.AceParser(os.path.join(app.config['STATIC'], "erg.dat"),
@@ -641,7 +688,6 @@ with app.app_context():
              ace.AceParser(os.path.join(app.config['STATIC'], "erg-mal.dat"),
                            executable=os.path.join(app.config['STATIC'], "ace"),
                            cmdargs=['-1', '--timeout=10', '--udx']) as mal:
-             
 
             
             for sid in sents.keys():
