@@ -18,6 +18,7 @@ from common_sql import *
 
 import delphin
 from delphin.interfaces import ace
+from delphin.derivation import UdfNode, UdfTerminal
 
 class TimeoutError(Exception):
     ''' Too long processing time '''
@@ -50,6 +51,23 @@ new_contractions = set([])
 for c in contractions:
     new_contractions.add(c.replace("'","’"))
 contractions = contractions | new_contractions
+
+
+def checkd(obj,errors):
+    """check each node"""
+    if isinstance(obj, UdfNode):
+        error = ''
+        if 'rbst' in obj.entity:
+            error = obj.entity
+        if  obj.type and 'mal_' in obj.type:
+            error = obj.type
+        if error:
+            span = " ".join([t.form for t in obj.terminals()])
+            errors.append((error, span))
+            print(error, span)
+        for dtr in obj.daughters:
+            dtrs = checkd(dtr,errors)
+    return errors
 
 
 
@@ -595,10 +613,10 @@ with app.app_context():
         # USE ACE TO CHECK PARSES FOR EACH SENTENCE
         with ace.AceParser(os.path.join(app.config['STATIC'], "erg.dat"),
                            executable=os.path.join(app.config['STATIC'], "ace"),
-                           cmdargs=['-1', '--timeout=5']) as parser, \
+                           cmdargs=['-1', '--timeout=10']) as parser, \
              ace.AceParser(os.path.join(app.config['STATIC'], "erg-mal.dat"),
                            executable=os.path.join(app.config['STATIC'], "ace"),
-                           cmdargs=['-1', '--timeout=5']) as mal:
+                           cmdargs=['-1', '--timeout=10', '--udx']) as mal:
              
 
             
@@ -607,19 +625,24 @@ with app.app_context():
                 erg_parse = parser.interact(sents[sid][2])
                 parses = len(erg_parse['RESULTS'])
 
-                print("sid:" + str(sid) + " - " + str(parses) + " parses.")  #TEST#
+                print("sid:" + str(sid) + " - " + str(parses) + " parses.", flush=True)  #TEST#
                 if parses == 0:
 
                     mal_result = mal.interact(sents[sid][2]) 
 
                     if len(mal_result['RESULTS']) > 0:  # If the mal-grammar can get a parse
 
-                        d = str(mal_result.result(0).derivation())
-                        rbst_tags = re.findall(r'[_a-z]+rbst[_a-z]*', d)
+                        print("MALPARSE >>> sid:" + str(sid) + " - " + str(len(mal_result['RESULTS'])) + " parses.", flush=True)  #TEST#
 
-                        for tag in rbst_tags:
+                        # d = str(mal_result.result(0).derivation())
+                        # rbst_tags = re.findall(r'[_a-z]+rbst[_a-z]*', d)
+                        rbst_tags = checkd(mal_result.result(0).derivation(),[])
 
-                            onsite_error[sid][doc_eid] = {"confidence": 10, "position": "all", "string": None, "label": tag}
+                        
+                        # for tag in rbst_tags:
+                        for tag, string in rbst_tags:
+                            
+                            onsite_error[sid][doc_eid] = {"confidence": 10, "position": "all", "string": string, "label": tag}
                             doc_eid += 1
 
                             # subva = "third_sg_fin_v_rbst"
