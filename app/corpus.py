@@ -31,10 +31,18 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['STATIC'] = STATIC
 
 
-# CHECK FOR PET PEEVES
-informal_lang = set(['hassle', 'Hassle', 'tackle', 'Tackle'] )
 
-        
+
+# CHECK FOR PET PEEVES
+wordcheck = dd(list)
+wordcheck['Informal'] = set(['hassle', 'Hassle', 'tackle', 'Tackle'])
+# informal_lang = set(['hassle', 'Hassle', 'tackle', 'Tackle'])
+
+wordcheck['Formal'] = set(['whereby', 'aforementioned'])
+
+wordcheck['PronounStyle']= set(["I", "me", "mine", "my", "myself", "we", "our", "ours", "us", "ourself", "ourselves", "you", "your", "yourself"])
+# pronoun_style = set(["I", "me", "mine", "my", "myself", "we", "our", "ours", "us", "ourself", "ourselves", "you", "your", "yourself"])
+
 contractions = set(["ain't", "aren't", "can't", "could've", "couldn't", "didn't", "doesn't",
                     "don't", "gonna", "gotta", "hadn't", "hasn't", "haven't", "he'd", "he'll",
                     "he's", "how'd", "how'll", "how's", "I'd", "I'll", "I'm", "I've", "isn't",
@@ -229,11 +237,11 @@ with app.app_context():
             cfds = []
             for eid in sorted(error_list[sid].keys()):
                 cfds.append(error_list[sid][eid]["confidence"])
-                label_and_string += '''<b>{}</b>'''.format(error_list[sid][eid]["label"])
+                label_and_string += '''<nobr><b>{}</b>'''.format(error_list[sid][eid]["label"])
                 if error_list[sid][eid]["string"] != None:
-                    label_and_string += ":"
-                    label_and_string += error_list[sid][eid]["string"]
-                label_and_string += ";"
+                    label_and_string += ": "
+                    label_and_string += '<i>'+error_list[sid][eid]["string"]+'</i>'
+                label_and_string += ";</nobr> "
 
             if max(cfds) > 5:
                 html = html.replace('error_s{}'.format(sid), "seriouserror")
@@ -596,16 +604,32 @@ with app.app_context():
         # I added the capitalised forms by hand for now  
         for sid in words.keys():
             for wid in words[sid].keys():
-                if words[sid][wid][2] in informal_lang:
 
-                    onsite_error[sid][doc_eid] = {"confidence": 5, "position": str(wid), "string": words[sid][wid][2], "label": "InformalWord"}
+                lemma = words[sid][wid][2].lower()
+                word = words[sid][wid][0].lower()
+
+                # Checking for repeated words
+                if (wid+1 in words[sid]) and (words[sid][wid+1][0].lower() == word):
+                        onsite_error[sid][doc_eid] = {"confidence": 5, "position": str(wid), "string": word+' '+word, "label": "RepeatedWord"}
+                        doc_eid += 1
+                    
+                
+                # Checking for lemma based checks
+                for check in wordcheck:
+                    if lemma in wordcheck[check]:
+                        onsite_error[sid][doc_eid] = {"confidence": 10, "position": str(wid), "string": lemma, "label": check}
+                        doc_eid += 1
+                        
+
+                    
+            # SENTENCE CHECKS
+            for c in contractions:
+                if re.search(r'\b{}\b'.format(c), sents[sid][2], re.IGNORECASE):
+                    # if c in sents[sid][2]:
+                    onsite_error[sid][doc_eid] = {"confidence": 10, "position": str(wid), "string": c, "label": "Contraction"}
                     doc_eid += 1
 
 
-            for c in contractions: #FIXME
-                if c in sents[sid][2]:
-                    onsite_error[sid][doc_eid] = {"confidence": 5, "position": str(wid), "string": c, "label": "Contraction"}
-                    doc_eid += 1
 
 
         
