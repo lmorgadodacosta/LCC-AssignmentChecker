@@ -65,7 +65,9 @@ contractions = contractions | new_contractions
 wordcase_ntu = set(["Executive Committee", "Student Services Center", "Student Services Centre", "Jurong East", "NTU", "Student Union",
                     "Computer Science","Google", "Singaporeans","Singaporean", "Singapore","School of Engineering",
                     "Nanyang Techonological University","MRT"])
-months = set(["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"])
+
+months = set(["January", "February", "March", "April", "June", "July", "August", "September", "October", "November", "December"]) # "May" is ambigous, leaving it out
+
 places = set(["Alexandra", "Aljunied", "Geylang", "Ayer Rajah", "Balestier", "Bartley", "Bishan", "Marymount", "Sin Ming", "Bukit Timah", "Sixth Avenue",
               "Buona Vista", "Holland Village", "One North", "Ghim Moh", "Chinatown", "Clarke Quay", "Kreta Ayer", "Telok Ayer", "Kallang", "Bendemeer",
               "Geylang Bahru", "Kallang Bahru", "Kallang Basin", "Kolam Ayer", "Tanjong Rhu", "Mountbatten", "Old Airport", "Lavender", "Boon Keng",
@@ -417,8 +419,10 @@ with app.app_context():
         p_tags = [nn for nn in html_list if nn.startswith("<p id=")]
         pid_max = len(p_tags)
 
-        sid = fetch_max_sid()
-
+        # FIXME sids are throwing sqlite constraint errors if multime documents are uploaded at the same time 
+        # sid = fetch_max_sid()  # LMC Testing if this solves multiple document submission
+        sid = docid * 1000000 
+        
 
         ''' activate lemmatizer for pos_lemma '''
         wnl = WordNetLemmatizer()
@@ -741,7 +745,7 @@ with app.app_context():
 
                         # print('non proposition:', mrs.properties(mrs.index)['SF'])
                         onsite_error[sid][doc_eid] = {"confidence": 5, "position": "all", "string": None, "label": sf }
-                        f.write(str(docid)+"\t"+str(sid)+"\t"+str(doc_eid)+"\t5\tall\tNNON\t"+sf+"\n")
+                        f.write(str(docid)+"\t"+str(sid)+"\t"+str(doc_eid)+"\t5\tall\tNNON\t"+str(sf)+"\n")
                         doc_eid += 1
 
                     
