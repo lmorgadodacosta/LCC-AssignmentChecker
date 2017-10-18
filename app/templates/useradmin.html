@@ -1,13 +1,16 @@
-{% extends "ili.html" %}
+{% extends "index.html" %}
 {% block body %}
 
 <h4>User Admin</h4>
 
 <p>
   This is a list of current users. This should only be seen by people 
-  in the admin group, with access level of 99.
+  in the admin group (and with access level of 99).
 </p>
 
+<p>
+<strong>There are currently {{users.keys()|length}} users in the database.</strong>
+</p>
 
 <table class="sortable hoverTable">  
   <thead>
