@@ -39,14 +39,13 @@ wordcheck = dd(list)
 # Wordcheck is checked at lemma level (important for verbs)
 wordcheck['Informal'] = set(['hassle', 'tackle', 'stuff', 'stuffs', 'handy', 'air-con', 'info', 'fantastic', 'humongous', 'cash'])
 
-wordchoice = set(["I would like to say","to wrap up","come up with","handy","total waste of time","come into play",
-                  "without further ado", "tons of","to make things worse,","fork out"])
+wordchoice = set(["I would like to say","to wrap up","come up with","total waste of time","come into play",
+                  "without further ado", "tons of","fork out"])
 
 
-wordcheck['Formal'] = set(['whereby', 'aforementioned'])
+wordcheck['Formal'] = set(['aforementioned'])
 
-wordcheck['PronounStyle']= set(["I", "me", "mine", "my", "myself", "we", "our", "ours", "us", "ourself", "ourselves", "you", "your", "yourself"])
-# pronoun_style = set(["I", "me", "mine", "my", "myself", "we", "our", "ours", "us", "ourself", "ourselves", "you", "your", "yourself"])
+wordcheck['PronounStyle']= set(["I", "me", "mine", "my", "myself",  "you", "your", "yours", "yourself"])
 
 contractions = set(["ain't", "aren't", "can't", "could've", "couldn't", "didn't", "doesn't",
                     "don't", "gonna", "gotta", "hadn't", "hasn't", "haven't", "he'd", "he'll",
@@ -65,8 +64,9 @@ for c in contractions:
     new_contractions.add(c.replace("'","’"))
 contractions = contractions | new_contractions
 
-wordcase_ntu = set(["Executive Committee", "Student Services Center", "Jurong East", "NTU", "Student Union", "Computer Science","Google","Singaporeans",
-                "Singapore","School of Engineering","Nanyang Techonological University","MRT"])
+wordcase_ntu = set(["Executive Committee", "Student Services Center", "Student Services Centre", "Jurong East", "NTU", "Student Union",
+                    "Computer Science","Google", "Singaporeans","Singaporean", "Singapore","School of Engineering",
+                    "Nanyang Techonological University","MRT"])
 months = set(["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"])
 places = set(["Alexandra", "Aljunied", "Geylang", "Ayer Rajah", "Balestier", "Bartley", "Bishan", "Marymount", "Sin Ming", "Bukit Timah", "Sixth Avenue",
               "Buona Vista", "Holland Village", "One North", "Ghim Moh", "Chinatown", "Clarke Quay", "Kreta Ayer", "Telok Ayer", "Kallang", "Bendemeer",
@@ -622,8 +622,8 @@ with app.app_context():
         doc_eid = 0
         onsite_error = dd(lambda: dd(dict))
 
-        seriousthreshold = 40
-        mildthreshold = 30
+        seriousthreshold = 50
+        mildthreshold = 40
         for sid in words.keys():
             sentlen = len(list(words[sid].keys()))
             if sentlen >= seriousthreshold:
