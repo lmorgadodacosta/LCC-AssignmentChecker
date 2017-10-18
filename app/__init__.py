@@ -397,7 +397,7 @@ def tag2text(tag):
 
 @app.route("/check_gold",methods=["GET"])
 def check_gold():
-    maxgold=274
+    maxgold=274    # the number of documents +1
     error_sys_dic = {}
     for docid in range(1, maxgold):  # range(1, 274)
         error_sys_dic[docid] = check_doc(docid, "gold")
@@ -409,6 +409,7 @@ def check_gold():
     #sys_long_set = set()
     #sys_informal_set = set()
     sys_error2pstn = dd(set)
+    sys_tag2pstn = dd(set)
     for docid in annotated_docids:
         if not docid in error_sys_dic.keys():
             continue
@@ -417,19 +418,28 @@ def check_gold():
                 if error_sys_dic[docid][sid][eid]["label"] == "LongSentence":
                     #sys_long_set.add((docid, sid))
                     sys_error2pstn["LongSentence"].add((docid, sid))
+                    sys_tag2pstn["LongSentence"].add((docid, sid))
                 elif error_sys_dic[docid][sid][eid]["label"] == "VeryLongSentence":
                     sys_error2pstn["LongSentence"].add((docid, sid))
+                    sys_tag2pstn["VeryLongSentence"].add((docid, sid))
                 elif error_sys_dic[docid][sid][eid]["label"] == "Informal":
                     pstn = int(error_sys_dic[docid][sid][eid]["position"])
                     #sys_informal_set.add((docid, sid, pstn))
                     sys_error2pstn["Informal"].add((docid, sid, pstn))
+                    sys_tag2pstn["Informal"].add((docid, sid, pstn))
                 elif error_sys_dic[docid][sid][eid]["label"] == "Contraction":  # put "position" info if you have word id or something 
                     sys_error2pstn["Contraction"].add((docid, sid))
+                    sys_tag2pstn["Contraction"].add((docid, sid))
                 elif error_sys_dic[docid][sid][eid]["label"] in set(["comm", "ques"]):
                     sys_error2pstn["commques"].add((docid, sid))
+                    if error_sys_dic[docid][sid][eid]["label"] == "comm":
+                        sys_tag2pstn["comm"].add((docid, sid))
+                    else:
+                        sys_tag2pstn["ques"].add((docid, sid))
                 else:
                     label = error_sys_dic[docid][sid][eid]["label"]
                     sys_error2pstn[label].add((docid, sid))
+                    sys_tag2pstn[label].add((docid, sid))
 
 
     ''' extract data from gold corpus '''
@@ -500,7 +510,7 @@ def check_gold():
     check_gold_html += '<br /><hr>\n'
 
     ''' long sentence and informal words static '''
-    numbers_heading =  '''<h3>Numbers of long sentence and informal words (hastle/tackle)</h3>\n'''
+    numbers_heading =  '''<h3>Numbers of long sentence and informal words (hassle/tackle)</h3>\n'''
     #allover_sents_number = g.gold.execute('''SELECT COUNT(sid) FROM sent WHERE docid IN ('{}')'''.format("', '".join(annotated_docids))).fetchone()[0]
     long_sub_heading = '''<h5>"LongSentence" by System  VS  "SLong" by Annotators</h5>\n'''
     allover_sents_number = g.gold.execute('''SELECT COUNT(sid) FROM sent WHERE docid IN {}'''.format(tuple(annotated_docids))).fetchone()[0]
@@ -636,13 +646,15 @@ def check_gold():
 
 
     ''' Other labels (System)'''
-    other_sub_heading = '''<h5>Other errors by System</h5>\n'''
-    for label in sorted(sys_error2pstn.keys()):
-        if label in set(["LongSentence", "Informal", "Contraction"]):
-            continue
+    other_sub_heading = '''<h3>Errors by System (A to Z)</h3>\n'''
+    check_gold_html += other_sub_heading
+    for label in sorted(sys_tag2pstn.keys()):
+        #if label in set(["LongSentence", "VeryLongSentence", "Informal", "Contraction"]):
+        #    continue
         label_heading = '''<h5><b>{}</b></h5>\n'''.format(label)
+        check_gold_html += label_heading
         oth_sents = ""
-        for oth in sorted(sys_error2pstn[label]):
+        for oth in sorted(sys_tag2pstn[label]):
             oth_sent = g.gold.execute('''SELECT sent FROM sent WHERE sid=?''', (oth[1],)).fetchone()[0]
             oth_sents += escape(oth_sent)
             oth_sents += ''' (docid={0}, orig_sid={1})<br />\n'''.format(oth[0], oth[1])
@@ -654,8 +666,12 @@ def check_gold():
                 oth_sents += '''None'''
             oth_sents += '<br /><br />\n'
 
-    oth_static_string = other_sub_heading+label_heading+oth_sents+'''<br /><hr>\n\n'''
-    check_gold_html += oth_static_string
+        check_gold_html += oth_sents
+
+    check_gold_html += '<br /><hr>\n'
+
+    #oth_static_string = other_sub_heading+label_heading+oth_sents+'''<br /><hr>\n\n'''
+    #check_gold_html += oth_static_string
 
     ''' sents with error '''
     s_e_heading = '''<h3>Sentences with error</h3><br />\n'''

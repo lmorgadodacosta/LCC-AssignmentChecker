@@ -92,6 +92,22 @@ places = set(["Alexandra", "Aljunied", "Geylang", "Ayer Rajah", "Balestier", "Ba
 wordcase = wordcase_ntu | months | places
 
 
+# # ONLY FOR PRIVATE USE
+# erg_mal = dd(lambda: dd(lambda: dd(dict)))
+# for rw in open("erg+mal_result.txt", "r"):
+#     if len(rw.strip()) == 0:
+#         continue
+#     docid, sid, doc_eid, confidence, position, string, label = rw.strip().split("\t")
+#     if string == "NNON":
+#         string = None
+#     if label.startswith("[") and label.endswith("]"):
+#         if len(label) == 2:
+#             label = "empty_tag_or_label"
+#         else:
+#             label = label[1:-1].replace(" ", ":")
+#     erg_mal[int(docid)][int(sid)][int(doc_eid)] = {"confidence": int(confidence), "position": position, "string": string, "label": label}
+
+
 
 def checkd(obj,errors):
     """check each node"""
@@ -623,8 +639,9 @@ with app.app_context():
 
         doc_eid = 0
         onsite_error = dd(lambda: dd(dict))
-        
-        f = open("erg+mal_result.txt", "a")
+
+        # ONLY FOR PRIVATE USE
+        #f = open("erg+mal_result.txt", "a")
 
         seriousthreshold = 50
         mildthreshold = 40
@@ -682,7 +699,15 @@ with app.app_context():
                     onsite_error[sid][doc_eid] = {"confidence": 5, "position": "all", "string": exp, "label": "WordChoice"}
                     doc_eid += 1
             
-                    
+
+
+        # # USE ACE TO CHECK PARSES FOR EACH SENTENCE (ONLY FOR PRIVATE USE)
+        # if docid in erg_mal.keys():
+        #     for sid in erg_mal[docid].keys():
+        #         for mal_eid in erg_mal[docid][sid].keys():
+        #             #print(docid, sid, erg_mal[docid][sid][mal_eid])
+        #             onsite_error[sid][doc_eid] = erg_mal[docid][sid][mal_eid]
+        #             doc_eid += 1
 
         # USE ACE TO CHECK PARSES FOR EACH SENTENCE
         with ace.AceParser(os.path.join(app.config['STATIC'], "erg.dat"),
@@ -714,8 +739,17 @@ with app.app_context():
                         
                         # for tag in rbst_tags:
                         for tag, string in rbst_tags:
-                            f.write(str(docid)+"\t"+str(sid)+"\t"+str(doc_eid)+"\t10\tall\t"+string+"\t"+tag+"\n")
+                            if type(tag) == list:
+                                if len(tag) == 0:
+                                    tag = "empty_tag"
+                                else:
+                                    tag = ":".join(tag)
+                                
                             onsite_error[sid][doc_eid] = {"confidence": 10, "position": "all", "string": string, "label": tag}
+
+                            # ONLY FOR PRIVATE USE
+                            #f.write('''{0}\t{1}\t{2}\t10\tall\t{3}\t{4}\n'''.format(docid, sid, doc_eid, string, tag))
+
                             doc_eid += 1
 
                             # subva = "third_sg_fin_v_rbst"
@@ -723,7 +757,10 @@ with app.app_context():
                         
                     else: # only a general NoParse tag can be given
                         onsite_error[sid][doc_eid] = {"confidence": 5, "position": "all", "string": None, "label": "NoParse"}
-                        f.write(str(docid)+"\t"+str(sid)+"\t"+str(doc_eid)+"\t5\tall\tNNON\tNoParse\n")
+
+                        # ONLY FOR PRIVATE USE
+                        #f.write('''{0}\t{1}\t{2}\t5\tall\tNNON\tNoParse\n'''.format(docid, sid, doc_eid))
+
                         doc_eid += 1
 
 
@@ -744,8 +781,18 @@ with app.app_context():
                     if 'prop' not in sf:
 
                         # print('non proposition:', mrs.properties(mrs.index)['SF'])
+
+                        if type(sf) == list:
+                            if len(sf) == 0:
+                                sf = "empty_sf"
+                            else:
+                                sf = ":".join(sf)
+
                         onsite_error[sid][doc_eid] = {"confidence": 5, "position": "all", "string": None, "label": sf }
-                        f.write(str(docid)+"\t"+str(sid)+"\t"+str(doc_eid)+"\t5\tall\tNNON\t"+str(sf)+"\n")
+
+                        # ONLY FOR PRIVATE USE
+                        #f.write('''{0}\t{1}\t{2}\t5\tall\tNNON\t{3}\n'''.format(docid, sid, doc_eid, sf))
+
                         doc_eid += 1
 
                     
