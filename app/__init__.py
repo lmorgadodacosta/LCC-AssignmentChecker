@@ -25,10 +25,11 @@ from check import *
 
 from math import log
 
+
 app = Flask(__name__)
 app.secret_key = "!$flhgSgngNO%$#SOET!$!"
 app.config["REMEMBER_COOKIE_DURATION"] = datetime.timedelta(minutes=30)
-
+ROBUSTEXCEPT = False
 #error_logging = open("corpus_inputting_error_log", "a")#, "utf-8")    ####tk####
 
 ################################################################################
@@ -272,36 +273,40 @@ def file2db():
     filename = request.args.get('fn', None)
 
 
-    try:                                                   ####tk####
-        r = docx2html(filename)
+    if ROBUSTEXCEPT:
+    
+        try:                                                   ####tk####
+            r = docx2html(filename)
 
-    except TimeoutError:                                                       ####tk####
-        current_time = current_time()                                          ####tk####
-        error_logging.write(current_time+"\n")                                 ####tk####
-        error_logging.write("DOCNAME: {}\n".format(filename))                         ####tk####
-        error_logging.write("Type: Timeout\n\n")                            ####tk####
+        except TimeoutError:                                                       ####tk####
+            current_time = current_time()                                          ####tk####
+            error_logging.write(current_time+"\n")                                 ####tk####
+            error_logging.write("DOCNAME: {}\n".format(filename))                         ####tk####
+            error_logging.write("Type: Timeout\n\n")                            ####tk####
 
-        #return render_template("exception.html")                               ####tk####
-        #return jsonify(result=False)#  docx2html_exception()                            ####tk####
-        r = False
-        error_logging.close()          
+            #return render_template("exception.html")                               ####tk####
+            #return jsonify(result=False)#  docx2html_exception()                            ####tk####
+            r = False
+            error_logging.close()          
 
-    except Exception as e:                                                     ####tk####
-        current_time = current_time()                                          ####tk####
-        error_logging.write(current_time+"\n")                                 ####tk####
-        error_logging.write("DOCNAME: {}\n".format(filename))                         ####tk####
-        error_logging.write("Type: {type}\n".format(type=type(e)))               ####tk####
-        error_logging.write("Args: {args}\n".format(args=e.args))                ####tk####
+        except Exception as e:                                                     ####tk####
+            current_time = current_time()                                          ####tk####
+            error_logging.write(current_time+"\n")                                 ####tk####
+            error_logging.write("DOCNAME: {}\n".format(filename))                         ####tk####
+            error_logging.write("Type: {type}\n".format(type=type(e)))               ####tk####
+            error_logging.write("Args: {args}\n".format(args=e.args))                ####tk####
 
-        if hasattr(e, 'message'):
-            error_logging.write("Message: {message}\n".format(message=e.message))    ####tk####
-            
-        error_logging.write("Error: {error}\n\n".format(error=e))             ####tk####
-        error_logging.close()          
-        r = False
-        #return render_template("exception.html")                            ####tk####
-        #return jsonify(result=False)#docx2html_exception()                            ####tk####
+            if hasattr(e, 'message'):
+                error_logging.write("Message: {message}\n".format(message=e.message))    ####tk####
 
+            error_logging.write("Error: {error}\n\n".format(error=e))             ####tk####
+            error_logging.close()          
+            r = False
+            #return render_template("exception.html")                            ####tk####
+            #return jsonify(result=False)#docx2html_exception()                            ####tk####
+
+    else:
+            r = docx2html(filename)
 
 
 #     vr, filename, wn, wn_dtls = validateFile(current_user.id, filename)
