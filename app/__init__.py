@@ -410,11 +410,10 @@ def check_gold():
     annotated_docids = [did[0] for did in g.gold.execute("SELECT DISTINCT docid FROM sent WHERE comment IS NOT '' ORDER BY docid")]
 
 
-    ''' extract "LongSentence" and "Informal" from error_sys_dic '''
+    ''' extract from error_sys_dic to compare with errors from annotators '''
     #sys_long_set = set()
     #sys_informal_set = set()
     sys_error2pstn = dd(set)
-    sys_tag2pstn = dd(set)
     for docid in annotated_docids:
         if not docid in error_sys_dic.keys():
             continue
@@ -423,28 +422,19 @@ def check_gold():
                 if error_sys_dic[docid][sid][eid]["label"] == "LongSentence":
                     #sys_long_set.add((docid, sid))
                     sys_error2pstn["LongSentence"].add((docid, sid))
-                    sys_tag2pstn["LongSentence"].add((docid, sid))
                 elif error_sys_dic[docid][sid][eid]["label"] == "VeryLongSentence":
                     sys_error2pstn["LongSentence"].add((docid, sid))
-                    sys_tag2pstn["VeryLongSentence"].add((docid, sid))
                 elif error_sys_dic[docid][sid][eid]["label"] == "Informal":
                     pstn = int(error_sys_dic[docid][sid][eid]["position"])
                     #sys_informal_set.add((docid, sid, pstn))
                     sys_error2pstn["Informal"].add((docid, sid, pstn))
-                    sys_tag2pstn["Informal"].add((docid, sid, pstn))
                 elif error_sys_dic[docid][sid][eid]["label"] == "Contraction":  # put "position" info if you have word id or something 
                     sys_error2pstn["Contraction"].add((docid, sid))
-                    sys_tag2pstn["Contraction"].add((docid, sid))
                 elif error_sys_dic[docid][sid][eid]["label"] in set(["comm", "ques"]):
                     sys_error2pstn["commques"].add((docid, sid))
-                    if error_sys_dic[docid][sid][eid]["label"] == "comm":
-                        sys_tag2pstn["comm"].add((docid, sid))
-                    else:
-                        sys_tag2pstn["ques"].add((docid, sid))
                 else:
                     label = error_sys_dic[docid][sid][eid]["label"]
                     sys_error2pstn[label].add((docid, sid))
-                    sys_tag2pstn[label].add((docid, sid))
 
 
     ''' extract data from gold corpus '''
@@ -503,14 +493,27 @@ def check_gold():
     ''' show the tags from system and their frequency '''
     sys_tag_freq_heading = '''<h3>Numbers of tags from system</h3>\n'''
     check_gold_html += sys_tag_freq_heading
-    system_tags = dd(int)
+    system_tags = dd(set)
+    system_tags2 = dd(int)
     for docid in error_sys_dic.keys():
         for sid in error_sys_dic[docid].keys():
             for eid in error_sys_dic[docid][sid].keys():
                 tag = error_sys_dic[docid][sid][eid]["label"]
-                system_tags[tag] += 1
-    for tag, occ in sorted(system_tags.items(), key=lambda x:x[1], reverse=True):
+                string = error_sys_dic[docid][sid][eid]["string"]
+                system_tags2[tag] += 1
+                if string == None:
+                    system_tags[tag].add((docid, sid))
+                else:
+                    system_tags[tag].add((docid, sid, string))
+    system_tag_set = set()
+    for tag in system_tags.keys():
+        system_tag_set.add((tag, len(system_tags[tag])))
+    for tag, occ in sorted(system_tag_set, key=lambda x:x[1], reverse=True):
         check_gold_html += '''<b>{0}</b>: {1}<br />\n'''.format(tag, occ)
+#    for tag, occ in sorted(system_tags2.items(), key=lambda x:x[1], reverse=True):
+#        print(tag, occ)
+#    for tag, occ in sorted(system_tags.items(), key=lambda x:x[1], reverse=True):
+#        check_gold_html += '''<b>{0}</b>: {1}<br />\n'''.format(tag, occ)
 
     check_gold_html += '<br /><hr>\n'
 
@@ -650,26 +653,39 @@ def check_gold():
     check_gold_html += mood_static_string
 
 
-    ''' Other labels (System)'''
+    ''' Errors by System list '''
     other_sub_heading = '''<h3>Errors by System (A to Z)</h3>\n'''
     check_gold_html += other_sub_heading
-    for label in sorted(sys_tag2pstn.keys()):
+    for label in sorted(system_tags.keys()):
         #if label in set(["LongSentence", "VeryLongSentence", "Informal", "Contraction"]):
         #    continue
         label_heading = '''<h5><b>{}</b></h5>\n'''.format(label)
         check_gold_html += label_heading
         oth_sents = ""
-        for oth in sorted(sys_tag2pstn[label]):
-            oth_sent = g.gold.execute('''SELECT sent FROM sent WHERE sid=?''', (oth[1],)).fetchone()[0]
-            oth_sents += escape(oth_sent)
-            oth_sents += ''' (docid={0}, orig_sid={1})<br />\n'''.format(oth[0], oth[1])
-            oth_sents += '''&nbsp;&nbsp;Annotator(s):  '''
-            if len(at_label_dic[oth[0]][oth[1]].keys()) > 0:
-                for at_label in at_label_dic[oth[0]][oth[1]].keys():
-                    oth_sents += '''{}; '''.format(at_label)
-            else:
-                oth_sents += '''None'''
-            oth_sents += '<br /><br />\n'
+        prev_oth_sid = -1
+        for oth in sorted(system_tags[label]):
+            if oth[1] != prev_oth_sid:
+                oth_sents += '''<br />\n'''
+                oth_sent = g.gold.execute('''SELECT sent FROM sent WHERE sid=?''', (oth[1],)).fetchone()[0]
+                oth_sents += escape(oth_sent)
+                oth_sents += ''' (docid={0}, orig_sid={1})<br />\n'''.format(oth[0], oth[1])
+            if len(oth) == 3:
+                if len(oth[2]) < 30:
+                    oth_sents += '''&nbsp;&nbsp;string(from system): {}<br />\n'''.format(escape(oth[2]))
+                else:
+                    oth_sents += '''&nbsp;&nbsp;string(from system): {}<br />\n'''.format(escape(oth[2][:15]+"..."+oth[2][-15:]))
+
+            if oth[1] != prev_oth_sid:
+                oth_sents += '''&nbsp;&nbsp;Annotator(s):  '''
+                if len(at_label_dic[oth[0]][oth[1]].keys()) > 0:
+                    for at_label in at_label_dic[oth[0]][oth[1]].keys():
+                        oth_sents += '''{}; '''.format(at_label)
+                else:
+                    oth_sents += '''None'''
+                oth_sents += '<br />\n'
+                prev_oth_sid = [oth[1]]
+            
+            #check_gold_html += '<br />\n'
 
         check_gold_html += oth_sents
 
