@@ -43,7 +43,7 @@ wordchoice = set(["I would like to say","to wrap up","come up with","total waste
 
 wordcheck['Formal'] = set(['aforementioned'])
 
-wordcheck['PronounStyle']= set(["I", "me", "mine", "my", "myself",  "you", "your", "yours", "yourself"])
+wordcheck['PronounStyle']= set(["i", "me", "mine", "my", "myself",  "you", "your", "yours", "yourself"])
 
 contractions = set(["ain't", "aren't", "can't", "could've", "couldn't", "didn't", "doesn't",
                     "don't", "gonna", "gotta", "hadn't", "hasn't", "haven't", "he'd", "he'll",
@@ -64,7 +64,7 @@ contractions = contractions | new_contractions
 
 wordcase_ntu = set(["Executive Committee", "Student Services Center", "Student Services Centre", "Jurong East", "NTU", "Student Union",
                     "Computer Science","Google", "Singaporeans","Singaporean", "Singapore","School of Engineering",
-                    "Nanyang Techonological University","MRT"])
+                    "Nanyang Techonological University","MRT", "EZ-Link"])
 
 months = set(["January", "February", "March", "April", "June", "July", "August", "September", "October", "November", "December"]) # "May" is ambigous, leaving it out
 
@@ -93,9 +93,160 @@ wordcase = wordcase_ntu | months | places
 
 
 error_exclude = [] # this is a list of error not to be reported (i.e. they generate more noise than benefit)
-error_msgs = dd(str)
-error_msgs['NoParse'] = "There seems to be something wrong with this sentence, but we're not sure why..."
-error_msgs['LongSentence'] = "This sentence is too long..."
+error_msgs = dd(tuple) # a dictionary that provides a tuple with an error message and the confidence score 0-1
+#FIXME, need to clean the code below, confidence was coming from error check, not from error tag. 
+
+
+error_msgs['a_det_mass_rbst'] = ("""<strong>⇒</strong> You may be using an indefinite article, ‘a’ or ‘an’, before an uncountable noun (such as ‘research’): 
+{}. Indefinite articles should only precede singular countable nouns. Please check your sentence for uncountable nouns and remove any 
+indefinite articles that precede them.""", 1)
+
+error_msgs['a_det_plur_rbst'] = ("""<strong>⇒</strong> You may be using an indefinite article, ‘a’ or ‘an’, before a plural countable noun: {}. 
+Indefinite articles should only precede singular countable nouns. Please check your sentence for plural countable nouns and either 
+remove any indefinite articles that precede them, or change the plural noun to a singular one.""", 1)
+
+error_msgs['after_pp_rbst'] = ("""<strong>⇒</strong> You may be using an unnecessary preposition, such as ‘for’, ‘on’, and ‘about’, in this sentence: {}. 
+Please check whether all the prepositions in the sentence are needed. """, 0.5)
+
+error_msgs['aj-hdn_c_rbst'] = ("""<strong>⇒</strong>  You may be using an unnecessary comma between an adjective and a noun: {}. 
+Please check whether the comma in the sentence is needed.""", 0.5)
+
+error_msgs['an_det_mass_rbst'] = ("""<strong>⇒</strong> You may be using an indefinite article, ‘a’ or ‘an’, before an uncountable noun (such as ‘research’):
+ {}. Indefinite articles should only precede singular countable nouns. Please check your sentence for uncountable nouns and remove any
+ indefinite articles that precede them. """, 1)
+
+error_msgs['an_det_plur_rbst'] = ("""<strong>⇒</strong>  You may be using an indefinite article, ‘a’ or ‘an’, before a plural countable noun: {}. 
+Indefinite articles should only precede singular countable nouns. Please check your sentence for plural countable nouns and either 
+remove any indefinite articles that precede them, or change the plural noun to a singular one.""", 1)
+
+error_msgs['bad_adv1_rbst'] = ("""<strong>⇒</strong> You may be using an adverb inappropriately or the adverb may be in the wrong position in the 
+sentence: {}.  Please check your sentence and change either the adverb or its position if necessary.""", 0.5)
+
+error_msgs['comm'] = ("""<strong>⇒</strong> The system has identified this sentence as an instruction/command (discouraged in formal proposals) 
+rather than as a statement/description. However, if you are confident that the ‘sentence’ is not meant to be a sentence in the 
+first place, you can ignore the alert. For example, the ‘sentence’ may be a heading, part of a list of items and costs, or an 
+entry in your references list. Read your sentence carefully, and decide whether you need to change it. You should change it 
+if it is actually a command/instruction.""", 0.5)
+
+error_msgs['Contraction'] = ("""<strong>⇒</strong> This sentence contains a contraction, which is the use of an apostrophe before a shortened 
+form of a verb, or between a verb and a shortened form of 'not': {}. Contractions are not used in formal documents. 
+You may want to expand the contractions to spell out the verb or not in full.""", 1)
+
+error_msgs['Formal'] = ("""<strong>⇒</strong> This sentence may contain overly formal/archaic words or expressions that may make your writing 
+seem stilted or pompous: {}. You may want to replace these words and expressions with more commonly used expressions, such 
+as mentioned above, previously and according to, that will make your writing more accessible. """, 0.5)
+
+error_msgs['Informal'] = ("""<strong>⇒</strong> This sentence may contain subjective or informal words or expressions: {}. You may want to
+ replace these words and expressions with more formal and objective alternatives. """, 0.5)
+
+error_msgs['LongSentence'] = ("""<strong>⇒</strong> This sentence is much longer than the average sentence. It may be difficult for readers to 
+read the sentence and understand it after reading it once. There is also a higher risk of making grammar mistakes in such a 
+long sentence. You may want to consider breaking up the sentence to make it easier for the reader to follow the text.""", 0.5)
+
+error_msgs['VeryLongSentence'] = ("""<strong>⇒</strong> This sentence is much longer than the average sentence. It may be difficult for readers to 
+read the sentence and understand it after reading it once. There is also a higher risk of making grammar mistakes in such a 
+long sentence. You may want to consider breaking up the sentence to make it easier for the reader to follow the text.""", 1)
+
+
+error_msgs['PronounStyle'] = ("""<strong>⇒</strong> This sentence contains a first person singular pronoun or a second person pronoun: {}. 
+These pronouns are not used in formal technical writing. You may want to remove the pronouns listed above and use alternative 
+sentence constructions that avoid the use of such pronouns.""", 1)
+
+error_msgs['ques'] = ("""<strong>⇒</strong> The system has identified this sentence as a question (discouraged in formal writing). Read your sentence
+ carefully, and decide whether you need to change it. You should change it if it is actually a question in the main part of your 
+proposal. You can ignore the alert if the ‘question’ appears in your references list.""", 0.5)
+
+error_msgs['such_an_det_rbst'] = ("""<strong>⇒</strong> This sentence has a singular noun without an article or determiner: {}. As singular nouns 
+require an article or determiner in front of them, you may want to consider adding one in front of the noun.""", 1)
+
+error_msgs['their_rbst'] = ("""<strong>⇒</strong> You have used “there” in this sentence: {}. Please check if it should be “their” instead 
+and make the change if necessary.""", 0.5)
+
+error_msgs['third_sg_fin_v_rbst'] = ("""<strong>⇒</strong> This sentence may have a verb which does not agree in person and number with its subject: 
+{}. Please check the sentence and ensure that the verb agrees with its subject.""", 0.5)
+
+error_msgs['too_deg_nc_rbst'] = ("""<strong>⇒</strong> You have used “to” in this sentence: {}. Please check if it should be “too” instead and 
+make the change if necessary.""", 0.5)
+
+error_msgs['too_deg_rbst'] = ("""<strong>⇒</strong> You have used “to” more than once in this sentence: {}. Please check if “too” should have
+ been used in any of these instances instead and make the change if necessary.""", 0.5)
+
+error_msgs['v_np_its-mal_le'] = ("""<strong>⇒</strong> This sentence contains a third person singular pronoun which may not be compatible with 
+its reference noun: {}. Please check the sentence and change the pronoun if necessary.""", 0.5)
+
+error_msgs['v_pst_olr_rbst'] = ("""<strong>⇒</strong> This sentence contains a verb which has an irregular form in the past tense: {}. 
+You may want to consider changing the verb form. """, 1)
+
+error_msgs['vmod_i_rbst'] = ("""<strong>⇒</strong> This sentence contains a missing, inappropriate or unnecessary modal: {}. Please check your
+ sentence and reconsider your use of the modal if necessary.""", 0.5)
+
+error_msgs['w_comma-sdwch_plr_rbst'] = ("""<strong>⇒</strong> This sentence has a comma separating two independent clauses. Please check the 
+sentence and consider using a peroid/full-stop, a semi-colon or an appropriate conjunction instead.""", 0.5)
+
+error_msgs['well_a1_rbst'] = ("""<strong>⇒</strong> This sentence may contain the wrong form of a verb: {}. Please check the sentence
+ and consider changing the form of the verb if necessary.""", 0.5)
+
+error_msgs['Word Case'] = ("""<strong>⇒</strong> You may be using upper or lower case (capital and small letters) inappropriately in this 
+sentence: {}. Please check your sentence and make changes to your use of upper or lower case only if you feel it is 
+necessary.""", 0.5)
+
+error_msgs['every_all_rbst'] = ("""<strong>⇒</strong> You may have used 'every' before a plural noun in this sentence: {}. Please check 
+your sentence carefully and change it to 'all' if necessary. """, 1)
+
+error_msgs['everyday_adv_rbst'] = ("""<strong>⇒</strong> You have used 'everyday' as an adverb in your sentence: {}.  It should be spelled
+ 'every day', with a space in between when it is an adverb. Please check your sentence carefully and add a space between 
+'every' and 'day' if necessary.""", 1)
+
+error_msgs['hdn_bnp_c_rbst'] = ("""<strong>⇒</strong> This sentence has a singular noun without an article, determiner or possessive 
+before it: {}. Please check your sentence carefully and add an article, determiner or possessive before the singular 
+noun if necessary.""", 1)
+
+error_msgs['mal_det_pl_le'] = ("""<strong>⇒</strong> This sentence has a singular noun without an article, determiner or possessive 
+before it: {}. Please check your sentence carefully and add an article, determiner or possessive before the singular 
+noun or make the singular noun plural if necessary.""", 0.5)
+
+error_msgs['n_pl-mass_olr_rbst'] = ("""<strong>⇒</strong> This sentence contains the wrong form of the countable/uncountable noun:
+ {}. Please check the noun and remove the plural marking from the uncountable noun if necessary.""", 1)
+
+error_msgs['non_third_sg_fin_v_rbst'] = ("""<strong>⇒</strong> This sentence may have a verb which does not agree in person and 
+number with its subject: {}. Please check the sentence and ensure that the verb agrees with its subject.""", 1)
+
+error_msgs['num_det_2_rbst'] = ("""<strong>⇒</strong> You may have used the singular form of a noun with a determiner for plural 
+nouns: {}. Please check the determiner and the noun and ensure that they agree in number if necessary.""", 1)
+
+error_msgs['of_poss_stutter_rbst'] = ("""<strong>⇒</strong> You may have repeated a preposition in your sentence: {}. Please
+ check the sentence and remove one of the prepositions if necessary. """, 1)
+
+error_msgs['only_adv1_rbst'] = ("""<strong>⇒</strong> 'Only' may be in the wrong position in your sentence: {}. 
+Please check the sentence and move 'only' to another position if necessary. """, 0.5)
+
+error_msgs['other_rbst'] = ("""<strong>⇒</strong> You may have used 'other' wrongly in this sentence: {}. 
+Please check the sentence and replace 'other' if necessary.""", 0.5)
+
+error_msgs['RepeatedWord'] = ("""<strong>⇒</strong> You may have repeated a word in this sentence: {}.  
+Please check the sentence and remove one instance of this word if necessary.""", 1)
+
+error_msgs['sb-hd_mc-cma_c_rbst'] = ("""<strong>⇒</strong> You may not have used commas appropriately in this sentence: 
+{}.  Please check the sentence and make changes to your use of commas if necessary. """, 0.5)
+
+error_msgs['sb-hd_mc-ques_c_rbst'] = ("""<strong>⇒</strong> The system has identified this sentence as a question (discouraged 
+in formal writing). Please read your sentence carefully, and decide whether you need to change it. You should 
+change it if it is actually a question in the main part of your proposal. You can ignore the alert if the 
+‘question’ appears in your references list. """, 0.5)
+
+error_msgs['such_a_det_rbst'] = ("""<strong>⇒</strong> You have used 'such' before a singular countable noun in this 
+sentence: {} when there should be an article, 'a' or 'an' in between them.  Please read your sentence 
+carefully and insert an article after 'such' if necessary.""", 1)
+
+# error_msgs[''] = (""" """, )
+
+
+
+# Errors giving a generic message
+# other tags for this generic message: think_np_prdp_rbst, vp_sbrd-prd-aj_rbst, v-v_crd-fin-ncj_c_rbst, n-hdn_cpd-pl_rbst
+# n-n_crd-im_c_rbst, np-np_crd-im_c_rbst, subjh_bse_rbst
+error_msgs['NoParse'] = ("""<strong>⇒</strong> The system indicates that this sentence may be problematic but cannot specify the error/s. 
+Please read the sentence carefully to check whether there are any errors, and correct them.""", 0.5)
 
 
 # # ONLY FOR PRIVATE USE
@@ -292,40 +443,63 @@ with app.app_context():
             for eid in sorted(error_list[sid].keys()):   #  eid is the full error
 
                 error_label = error_list[sid][eid]["label"]
-                if error_label in error_exclude:
-                    label_and_string = ''
-                elif error_label in error_msgs:
 
-                    msg = error_msgs[error_label] # error message to print
-                    cfds.append(error_list[sid][eid]["confidence"])  # 5 or 10  (must only append if we want to paint as error)
+                if error_label in error_exclude: # ignore some errors
+                    label_and_string = ''
+
+                elif (error_label in error_msgs) and (error_label != "NoParse"):
+
+                    msg = error_msgs[error_label][0] # error message to print
+                    cfds.append(error_msgs[error_label][1]) # seriousness (from the msg)
+                    error_position = error_list[sid][eid]["string"] 
+
+                    if error_position and ("{}" in msg):
+                        label_and_string += msg.format('<i>'+error_position+'</i>')
+                    elif "{}" in msg:
+                        label_and_string += msg.format('<i>unknown</i>')
+                    else:
+                        label_and_string += msg
+                        
+                    label_and_string += ";<br>" # one error per line
+
+                    # cfds.append(error_list[sid][eid]["confidence"])  # 0-1  (must only append if we want to paint as error)
                     # label_and_string += '''<nobr><b>{}</b>'''.format(error_list[sid][eid]["label"])
                     # if error_list[sid][eid]["string"] != None:     # If it knows the span of the error
                     #     label_and_string += ": "
                     #     label_and_string += '<i>'+error_list[sid][eid]["string"]+'</i>'
                     # label_and_string += ";</nobr> "
-
-                    if error_list[sid][eid]["string"]:     # If it knows the span of the error
-                        label_and_string += "{}".format(msg)
-                        label_and_string += "(see: <i>"+error_list[sid][eid]["string"]+"</i>)"
-                    else: # no string to show
-                        label_and_string += "{}".format(msg)
+                    # if error_list[sid][eid]["string"]:     # If it knows the span of the error
+                    #     label_and_string += "{}".format(msg)
+                    #     label_and_string += "(see: <i>"+error_list[sid][eid]["string"]+"</i>)"
+                    # else: # no string to show
+                    #     label_and_string += "{}".format(msg)
                         
-                    label_and_string += ";"
-                    
+
                 else:
-                    msg = error_msgs['NoParse']
-                    cfds.append(error_list[sid][eid]["confidence"])  # 5 or 10  (must only append if we want to paint as error)
+                    msg = error_msgs['NoParse'][0]
+                    cfds.append(error_msgs['NoParse'][1]) # seriousness (from the msg)
+                    error_position = error_list[sid][eid]["string"] 
 
-                    if error_list[sid][eid]["string"]:     # If it knows the span of the error
-                        label_and_string += "{}".format(msg)
-                        label_and_string += "(see: <i>"+error_list[sid][eid]["string"]+"</i>)"
-                    else: # no string to show
-                        label_and_string += "{}".format(msg)
+
+                    if error_position:
+                        label_and_string += msg
+                        label_and_string += """ (check around <i>{}</i>)""".format(error_position)
+                    else:
+                        label_and_string += msg
+
+                    label_and_string += ";<br>"
+
+                    
+                    # cfds.append(error_list[sid][eid]["confidence"])  # 5 or 10  (must only append if we want to paint as error)
+                    # if error_list[sid][eid]["string"]:     # If it knows the span of the error
+                    #     label_and_string += "{}".format(msg)
+                    #     label_and_string += "(see: <i>"+error_list[sid][eid]["string"]+"</i>)"
+                    # else: # no string to show
+                    #     label_and_string += "{}".format(msg)
                         
-                    label_and_string += ";"
                     
 
-            if cfds and max(cfds) > 5:
+            if cfds and max(cfds) > 0.5:
                 html = html.replace('error_s{}'.format(sid), "seriouserror")  # Paint red
             elif cfds:
                 html = html.replace('error_s{}'.format(sid), "milderror")   # Paint yellow
@@ -776,18 +950,24 @@ with app.app_context():
             for wid in words[sid].keys():
 
                 lemma = words[sid][wid][2].lower()
+                word_truecase = words[sid][wid][0]
                 word = words[sid][wid][0].lower()
 
                 # Checking for repeated words
                 if (wid+1 in words[sid]) and (words[sid][wid+1][0].lower() == word):
-                        onsite_error[sid][doc_eid] = {"confidence": 5, "position": str(wid), "string": word+' '+word, "label": "RepeatedWord"}
-                        doc_eid += 1
-                    
+                        onsite_error[sid][doc_eid] = {"confidence": 5,
+                                                      "position": str(wid),
+                                                      "string": word_truecase + ' ' + word_truecase,
+                                                      "label": "RepeatedWord"}
+                        doc_eid += 1                    
                 
                 # Lemma checks in wordcheck
                 for check in wordcheck:
                     if lemma in wordcheck[check]:
-                        onsite_error[sid][doc_eid] = {"confidence": 10, "position": str(wid), "string": lemma, "label": check}
+                        onsite_error[sid][doc_eid] = {"confidence": 10,
+                                                      "position": str(wid),
+                                                      "string": word_truecase,
+                                                      "label": check}
                         doc_eid += 1
                         
 
@@ -795,18 +975,28 @@ with app.app_context():
             # SENTENCE-LEVEL CHECKS
             ################################
 
+            # I (1st Person Pronoun, special check)
+            # if re.search(r'\b{}\b'.format('I'), sents[sid][2]):
+            #     onsite_error[sid][doc_eid] = {"confidence": 10, "position": "all", "string": "I", "label": "PronounStyle"}
+            #     doc_eid += 1
+
+            
             # Contractions
             for c in contractions:
                 if re.search(r'\b{}\b'.format(c), sents[sid][2], re.IGNORECASE):
-                    # if c in sents[sid][2]:
                     onsite_error[sid][doc_eid] = {"confidence": 10, "position": "all", "string": c, "label": "Contraction"}
                     doc_eid += 1
 
             # Word Case
             for exp in wordcase:
-                if re.search(r'\b{}\b'.format(exp), sents[sid][2], re.IGNORECASE) and (re.search(r'\b{}\b'.format(exp), sents[sid][2], re.IGNORECASE).group() != exp):
+                # we were getting lots of url matches with word boundary; check for space before and beginning of sentence 
+                if re.search(r' {}\b'.format(exp), sents[sid][2], re.IGNORECASE) and (re.search(r'\b{}\b'.format(exp), sents[sid][2], re.IGNORECASE).group() != exp):
                     onsite_error[sid][doc_eid] = {"confidence": 5, "position": "all", "string": exp, "label": "WordCase"}
                     doc_eid += 1
+                if re.search(r'${}\b'.format(exp), sents[sid][2], re.IGNORECASE) and (re.search(r'\b{}\b'.format(exp), sents[sid][2], re.IGNORECASE).group() != exp):
+                    onsite_error[sid][doc_eid] = {"confidence": 5, "position": "all", "string": exp, "label": "WordCase"}
+                    doc_eid += 1
+
                     
             # Word Choice (style)
             for exp in wordchoice:
