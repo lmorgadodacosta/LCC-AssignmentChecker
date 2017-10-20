@@ -372,7 +372,7 @@ with app.app_context():
 
         #pttn_close_a = re.compile(r'(<span class="tooltiptext">.+?</span></span>)(\s*?</a>)(\s*?(</p>|<span>))')
 
-        pttn_tooltiptext = re.compile(r'<span class="tooltiptext">.+?</span></span>')
+        pttn_tooltiptext = re.compile(r'<span class=\"tooltiptext\">.+?</span></span>')
         pttn_close_a = re.compile(r'\s*?</a>')
         #pttn_close_a = re.compile(r'</a>')
         pttn_cp_or_ospan = re.compile(r'\s*?(</p>|<span>)')
@@ -425,6 +425,9 @@ with app.app_context():
         unchecked_html = checked_html
         checked_html = ""
 
+        # These two lines don't work...
+        #pttn_open_a = re.compile(r'<a\s((?!>).)*><span\sid=\"s((?!>).)*>')
+        #pttn_open_a_bracket = re.compile(r'(<a\s((?!>).)*>)(<span\sid=\"s((?!>).)*>)')
         pttn_open_a = re.compile(r'<a\s((?!>).)*><span\sid=\"s.+?>')
         pttn_open_a_bracket = re.compile(r'(<a\s.+?>)(<span\sid=\"s.+?>)')
 
@@ -443,6 +446,43 @@ with app.app_context():
             checked_html += n.group(1)
 
         checked_html += unchecked_html
+
+
+        ''' dealing with <sup>/<sub> (maybe halfway measures) '''
+        unchecked_html = checked_html
+        checked_html = ""
+
+        pttn_supsub = re.compile(r'(<su(p|b)>){1,2}')
+        pttn_span = re.compile(r'(</?span((?!>).)*>){1,2}')
+
+        while re.search(pttn_supsub, unchecked_html):
+            m = re.search(pttn_supsub, unchecked_html)
+            checked_html += unchecked_html[:m.end()]  #including open_tag
+            unchecked_html = unchecked_html[m.end():]
+            open_tag = m.group(0)
+            #print(open_tag)
+            if len(m.group(0)) == 5:  # <sup>
+                close_tag = '''{0}/{1}'''.format(m.group(0)[0], m.group(0)[1:])
+            else:                     # <sup><sup>
+                close_tag = ('''{0}/{1}'''.format(m.group(0)[0], m.group(0)[1:5]))*2
+            #print(close_tag)
+            if re.search(pttn_span, unchecked_html):
+                spn = re.search(pttn_span, unchecked_html)
+                #print(spn.group(0))
+                close_tag_startpos = unchecked_html.index(close_tag)
+                if spn.start() < close_tag_startpos:
+                    #print(spn.group(0))
+                    checked_html += unchecked_html[:spn.start()]
+                    checked_html += close_tag
+                    checked_html += spn.group(0)
+                    checked_html += open_tag
+                    unchecked_html = unchecked_html[spn.end():]
+
+        checked_html += unchecked_html
+
+        checked_html = re.sub(r'(<su(p|b)>){1,2}(?!.)*(</su(p|b)>){1,2}', "", checked_html)
+        checked_html = re.sub(r'<span class=\"tooltiptext\"><su(p|b)>', '<span class=\"tooltiptext\">', checked_html)
+        checked_html = re.sub(r'</span></span></su(p|b)>', '</span></span>', checked_html)
 
 
         return checked_html
