@@ -92,6 +92,12 @@ places = set(["Alexandra", "Aljunied", "Geylang", "Ayer Rajah", "Balestier", "Ba
 wordcase = wordcase_ntu | months | places
 
 
+error_exclude = [] # this is a list of error not to be reported (i.e. they generate more noise than benefit)
+error_msgs = dd(str)
+error_msgs['NoParse'] = "There seems to be something wrong with this sentence, but we're not sure why..."
+error_msgs['LongSentence'] = "This sentence is too long..."
+
+
 # # ONLY FOR PRIVATE USE
 # erg_mal = dd(lambda: dd(lambda: dd(dict)))
 # for rw in open("erg+mal_result.txt", "r"):
@@ -281,21 +287,50 @@ with app.app_context():
     def add_errors_into_html(html, error_list):
         for sid in error_list.keys():
             #colour = ""
-            label_and_string = ""
+            label_and_string = ""  # This is what it printed inside the tooltip
             cfds = []
-            for eid in sorted(error_list[sid].keys()):
-                cfds.append(error_list[sid][eid]["confidence"])
-                label_and_string += '''<nobr><b>{}</b>'''.format(error_list[sid][eid]["label"])
-                if error_list[sid][eid]["string"] != None:
-                    label_and_string += ": "
-                    label_and_string += '<i>'+error_list[sid][eid]["string"]+'</i>'
-                label_and_string += ";</nobr> "
+            for eid in sorted(error_list[sid].keys()):   #  eid is the full error
 
-            if max(cfds) > 5:
-                html = html.replace('error_s{}'.format(sid), "seriouserror")
+                error_label = error_list[sid][eid]["label"]
+                if error_label in error_exclude:
+                    label_and_string = ''
+                elif error_label in error_msgs:
+
+                    msg = error_msgs[error_label] # error message to print
+                    cfds.append(error_list[sid][eid]["confidence"])  # 5 or 10  (must only append if we want to paint as error)
+                    # label_and_string += '''<nobr><b>{}</b>'''.format(error_list[sid][eid]["label"])
+                    # if error_list[sid][eid]["string"] != None:     # If it knows the span of the error
+                    #     label_and_string += ": "
+                    #     label_and_string += '<i>'+error_list[sid][eid]["string"]+'</i>'
+                    # label_and_string += ";</nobr> "
+
+                    if error_list[sid][eid]["string"]:     # If it knows the span of the error
+                        label_and_string += "{}".format(msg)
+                        label_and_string += "(see: <i>"+error_list[sid][eid]["string"]+"</i>)"
+                    else: # no string to show
+                        label_and_string += "{}".format(msg)
+                        
+                    label_and_string += ";"
+                    
+                else:
+                    msg = error_msgs['NoParse']
+                    cfds.append(error_list[sid][eid]["confidence"])  # 5 or 10  (must only append if we want to paint as error)
+
+                    if error_list[sid][eid]["string"]:     # If it knows the span of the error
+                        label_and_string += "{}".format(msg)
+                        label_and_string += "(see: <i>"+error_list[sid][eid]["string"]+"</i>)"
+                    else: # no string to show
+                        label_and_string += "{}".format(msg)
+                        
+                    label_and_string += ";"
+                    
+
+            if cfds and max(cfds) > 5:
+                html = html.replace('error_s{}'.format(sid), "seriouserror")  # Paint red
+            elif cfds:
+                html = html.replace('error_s{}'.format(sid), "milderror")   # Paint yellow
             else:
-                html = html.replace('error_s{}'.format(sid), "milderror")
-
+                html = html.replace('error_s{}'.format(sid), "")   # Don't paint   
 
             rplc = '''<span class=\"tooltiptext\">{}</span>'''.format(label_and_string)
             html = html.replace('errortext_s{}'.format(sid), rplc)
