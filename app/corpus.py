@@ -381,7 +381,7 @@ with app.app_context():
 
         while '<em>' in unchecked_html:
             open_start_pos = unchecked_html.index('<em>')
-            open_end_pos = open_start_pos+8
+            open_end_pos = open_start_pos+4
             checked_html += unchecked_html[:open_end_pos]
             unchecked_html = unchecked_html[open_end_pos:]
 
@@ -393,12 +393,92 @@ with app.app_context():
                 checked_html += '<em>'
                 unchecked_html = unchecked_html[m.end():]
 
-            close_end_pos = unchecked_html.index('</em>')+9
+            close_end_pos = unchecked_html.index('</em>')+5
             checked_html += unchecked_html[:close_end_pos]
             unchecked_html = unchecked_html[close_end_pos:]
 
         checked_html += unchecked_html
         checked_html = checked_html.replace('<em></em>', '')
+
+
+        ''' dealing with 'tooltiptext + </a>' '''
+        unchecked_html = checked_html
+        checked_html = ""
+
+        #pttn_close_a = re.compile(r'(<span class="tooltiptext">.+?</span></span>)(\s*?</a>)(\s*?(</p>|<span>))')
+
+        pttn_tooltiptext = re.compile(r'<span class="tooltiptext">.+?</span></span>')
+        pttn_close_a = re.compile(r'\s*?</a>')
+        #pttn_close_a = re.compile(r'</a>')
+        pttn_cp_or_ospan = re.compile(r'\s*?(</p>|<span>)')
+
+        while re.search(pttn_tooltiptext, unchecked_html):
+            m_tooltip = re.search(pttn_tooltiptext, unchecked_html)
+            checked_html += unchecked_html[:m_tooltip.start()]
+            unchecked_html = unchecked_html[m_tooltip.end():]
+            m_close_a = re.search(pttn_close_a, unchecked_html)
+            m_cp_or_ospan = re.search(pttn_cp_or_ospan, unchecked_html)
+
+            if m_close_a and m_cp_or_ospan:
+                #print('''</a> :  {}'''.format(m_close_a.start()))
+                #print('''{0} :  {1}'''.format(m_cp_or_ospan.group(0), m_cp_or_ospan.start()))
+                if m_close_a.start() < m_cp_or_ospan.start():
+                    checked_html += m_close_a.group(0)
+                    checked_html += m_tooltip.group(0)
+                    unchecked_html = unchecked_html.replace(m_close_a.group(0), "", 1)
+                else:
+                    checked_html += m_tooltip.group(0)
+
+            else:
+                checked_html += m_tooltip.group(0)
+        
+        checked_html += unchecked_html
+
+        ''' dealing with </a> (no tooltiptext) '''
+        pttn_close_span_a = re.compile(r'(</span>)(\s*?</a>)')
+
+        unchecked_html = checked_html
+        checked_html = ""
+
+        while re.search(pttn_close_span_a, unchecked_html):
+            m = re.search(pttn_close_span_a, unchecked_html)
+
+            # print('''whole: {}'''.format(m.group(0)))
+            # print('''part2: {}'''.format(m.group(2)))
+            # print('''part1: {}'''.format(m.group(1)))
+
+            checked_html += unchecked_html[:m.start()]
+            unchecked_html = unchecked_html[m.end():]
+            checked_html += m.group(2)
+            checked_html += m.group(1)
+
+        checked_html += unchecked_html
+
+
+
+        ''' dealing with <a> '''
+        unchecked_html = checked_html
+        checked_html = ""
+
+        pttn_open_a = re.compile(r'<a\s((?!>).)*><span\sid=\"s.+?>')
+        pttn_open_a_bracket = re.compile(r'(<a\s.+?>)(<span\sid=\"s.+?>)')
+
+        while re.search(pttn_open_a, unchecked_html):
+            m = re.search(pttn_open_a, unchecked_html)
+            checked_html += unchecked_html[:m.start()]
+            unchecked_html = unchecked_html[m.end():]
+
+            n = re.search(pttn_open_a_bracket, m.group(0))
+            # print('''matchA: {}'''.format(m.group(0)))
+            # print('''matchB: {}'''.format(n.group(0)))
+            # print('''B-part2: {}'''.format(n.group(2)))
+            # print('''B-part1: {}'''.format(n.group(1)))
+
+            checked_html += n.group(2)
+            checked_html += n.group(1)
+
+        checked_html += unchecked_html
+
 
         return checked_html
 
