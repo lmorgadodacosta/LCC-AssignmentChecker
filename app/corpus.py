@@ -460,18 +460,18 @@ with app.app_context():
             checked_html += unchecked_html[:m.end()]  #including open_tag
             unchecked_html = unchecked_html[m.end():]
             open_tag = m.group(0)
-            print(open_tag)
+            #print(open_tag)
             if len(m.group(0)) == 5:  # <sup>
                 close_tag = '''{0}/{1}'''.format(m.group(0)[0], m.group(0)[1:])
             else:                     # <sup><sup>
                 close_tag = ('''{0}/{1}'''.format(m.group(0)[0], m.group(0)[1:5]))*2
-            print(close_tag)
+            #print(close_tag)
             if re.search(pttn_span, unchecked_html):
                 spn = re.search(pttn_span, unchecked_html)
                 #print(spn.group(0))
                 close_tag_startpos = unchecked_html.index(close_tag)
                 if spn.start() < close_tag_startpos:
-                    print(spn.group(0))
+                    #print(spn.group(0))
                     checked_html += unchecked_html[:spn.start()]
                     checked_html += close_tag
                     checked_html += spn.group(0)
