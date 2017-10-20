@@ -178,9 +178,10 @@ usage like so:
     border-radius: 6px;
     padding: 5px 5px;
     position: absolute;
+    /* position: relative; */
     z-index: 1;
     bottom: 150%;
-    left: 50%;
+    left: 20%;
     margin-left: -60px;
     border-color: black;
     border-style: solid;
