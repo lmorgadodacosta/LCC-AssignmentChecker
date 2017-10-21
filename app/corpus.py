@@ -92,7 +92,7 @@ places = set(["Alexandra", "Aljunied", "Geylang", "Ayer Rajah", "Balestier", "Ba
 wordcase = wordcase_ntu | months | places
 
 
-error_exclude = [] # this is a list of error not to be reported (i.e. they generate more noise than benefit)
+error_exclude = ['cl-np_runon_c_rbst', 'empty_tag_or_label'] # this is a list of error not to be reported (i.e. they generate more noise than benefit)
 error_msgs = dd(tuple) # a dictionary that provides a tuple with an error message and the confidence score 0-1
 #FIXME, need to clean the code below, confidence was coming from error check, not from error tag. 
 
@@ -119,8 +119,8 @@ error_msgs['an_det_plur_rbst'] = ("""<strong>⇒</strong>  You may be using an i
 Indefinite articles should only precede singular countable nouns. Please check your sentence for plural countable nouns and either 
 remove any indefinite articles that precede them, or change the plural noun to a singular one.""", 1)
 
-error_msgs['bad_adv1_rbst'] = ("""<strong>⇒</strong> You may be using an adverb inappropriately or the adverb may be in the wrong position in the 
-sentence: {}.  Please check your sentence and change either the adverb or its position if necessary.""", 0.5)
+error_msgs['bad_adv1_rbst'] = ("""<strong>⇒</strong> You may be using an adverb (e.g. 'too', 'only', 'rapidly') inappropriately or the adverb may be 
+in the wrong position in the sentence: {}.  Please check your sentence and change either the adverb or its position if necessary.""", 0.5)
 
 error_msgs['comm'] = ("""<strong>⇒</strong> The system has identified this sentence as an instruction/command (discouraged in formal proposals) 
 rather than as a statement/description. However, if you are confident that the ‘sentence’ is not meant to be a sentence in the 
@@ -128,9 +128,8 @@ first place, you can ignore the alert. For example, the ‘sentence’ may be a 
 entry in your references list. Read your sentence carefully, and decide whether you need to change it. You should change it 
 if it is actually a command/instruction.""", 0.5)
 
-error_msgs['Contraction'] = ("""<strong>⇒</strong> This sentence contains a contraction, which is the use of an apostrophe before a shortened 
-form of a verb, or between a verb and a shortened form of 'not': {}. Contractions are not used in formal documents. 
-You may want to expand the contractions to spell out the verb or not in full.""", 1)
+error_msgs['Contraction'] = ("""<strong>⇒</strong> This sentence contains a contraction (e.g. 'it's', 'he'll', 'can't): {}. Contractions are 
+not used in formal documents. You may want to expand the contractions to spell out the verb or the word 'not' in full.""", 1)
 
 error_msgs['Formal'] = ("""<strong>⇒</strong> This sentence may contain overly formal/archaic words or expressions that may make your writing 
 seem stilted or pompous: {}. You may want to replace these words and expressions with more commonly used expressions, such 
@@ -148,37 +147,38 @@ read the sentence and understand it after reading it once. There is also a highe
 long sentence. You may want to consider breaking up the sentence to make it easier for the reader to follow the text.""", 1)
 
 
-error_msgs['PronounStyle'] = ("""<strong>⇒</strong> This sentence contains a first person singular pronoun or a second person pronoun: {}. 
-These pronouns are not used in formal technical writing. You may want to remove the pronouns listed above and use alternative 
-sentence constructions that avoid the use of such pronouns.""", 1)
+error_msgs['PronounStyle'] = ("""<strong>⇒</strong> This sentence contains a first person singular pronoun (e.g. 'I', 'mine') or a second person
+ pronoun (e.g. 'you', 'yours'): {}. These pronouns are not used in formal technical writing. You may want to remove the pronouns listed above and 
+use alternative sentence constructions that avoid the use of such pronouns.""", 1)
 
 error_msgs['ques'] = ("""<strong>⇒</strong> The system has identified this sentence as a question (discouraged in formal writing). Read your sentence
  carefully, and decide whether you need to change it. You should change it if it is actually a question in the main part of your 
 proposal. You can ignore the alert if the ‘question’ appears in your references list.""", 0.5)
 
-error_msgs['such_an_det_rbst'] = ("""<strong>⇒</strong> This sentence has a singular noun without an article or determiner: {}. As singular nouns 
-require an article or determiner in front of them, you may want to consider adding one in front of the noun.""", 1)
+error_msgs['such_an_det_rbst'] = ("""<strong>⇒</strong> This sentence has a singular noun without an article ('a', 'an', 'the') or determiner 
+(e.g. 'each', 'this', 'my'): {}. As singular nouns require an article or determiner in front of them, you may want to consider 
+adding one in front of the noun.""", 1)
 
-error_msgs['their_rbst'] = ("""<strong>⇒</strong> You have used “there” in this sentence: {}. Please check if it should be “their” instead 
-and make the change if necessary.""", 0.5)
-
-error_msgs['third_sg_fin_v_rbst'] = ("""<strong>⇒</strong> This sentence may have a verb which does not agree in person and number with its subject: 
-{}. Please check the sentence and ensure that the verb agrees with its subject.""", 0.5)
-
-error_msgs['too_deg_nc_rbst'] = ("""<strong>⇒</strong> You have used “to” in this sentence: {}. Please check if it should be “too” instead and 
+error_msgs['their_rbst'] = ("""<strong>⇒</strong> You have used 'there' in this sentence: {}. Please check if it should be 'their' instead and 
 make the change if necessary.""", 0.5)
 
-error_msgs['too_deg_rbst'] = ("""<strong>⇒</strong> You have used “to” more than once in this sentence: {}. Please check if “too” should have
- been used in any of these instances instead and make the change if necessary.""", 0.5)
+error_msgs['third_sg_fin_v_rbst'] = ("""<strong>⇒</strong> This sentence may have a verb which does not agree in person (e.g. 'I', 'you', 's/he') 
+and number (singular/plural) with its subject: {}. Please check the sentence and ensure that the verb agrees with its subject.""", 0.5)
 
-error_msgs['v_np_its-mal_le'] = ("""<strong>⇒</strong> This sentence contains a third person singular pronoun which may not be compatible with 
-its reference noun: {}. Please check the sentence and change the pronoun if necessary.""", 0.5)
+error_msgs['too_deg_nc_rbst'] = ("""<strong>⇒</strong> You have used 'to' in this sentence: {}. Please check if it should be 'too' instead 
+and make the change if necessary.""", 0.5)
 
-error_msgs['v_pst_olr_rbst'] = ("""<strong>⇒</strong> This sentence contains a verb which has an irregular form in the past tense: {}. 
-You may want to consider changing the verb form. """, 1)
+error_msgs['too_deg_rbst'] = ("""<strong>⇒</strong> You have used 'to' more than once in this sentence: {}. Please check if 'too' should have been 
+used in any of these instances instead and make the change if necessary.""", 0.5)
 
-error_msgs['vmod_i_rbst'] = ("""<strong>⇒</strong> This sentence contains a missing, inappropriate or unnecessary modal: {}. Please check your
- sentence and reconsider your use of the modal if necessary.""", 0.5)
+error_msgs['v_np_its-mal_le'] = ("""<strong>⇒</strong> This sentence contains a third person singular pronoun ('he', 'she', 'it') which may not be 
+compatible with its reference noun: {}. Please check the sentence and change the pronoun if necessary.""", 0.5)
+
+error_msgs['v_pst_olr_rbst'] = ("""<strong>⇒</strong> This sentence contains a verb which has an irregular form in the past tense (e.g. 'ate', 
+'shook'): {}. You may want to consider changing the verb form.""", 1)
+
+error_msgs['vmod_i_rbst'] = ("""<strong>⇒</strong> This sentence contains a missing, inappropriate or unnecessary modal ('can, 'will', 'shall', 
+etc.): {}. Please check your sentence and reconsider your use of the modal if necessary.""", 0.5)
 
 error_msgs['w_comma-sdwch_plr_rbst'] = ("""<strong>⇒</strong> This sentence has a comma separating two independent clauses. Please check the 
 sentence and consider using a peroid/full-stop, a semi-colon or an appropriate conjunction instead.""", 0.5)
@@ -193,29 +193,30 @@ necessary.""", 0.5)
 error_msgs['every_all_rbst'] = ("""<strong>⇒</strong> You may have used 'every' before a plural noun in this sentence: {}. Please check 
 your sentence carefully and change it to 'all' if necessary. """, 1)
 
-error_msgs['everyday_adv_rbst'] = ("""<strong>⇒</strong> You have used 'everyday' as an adverb in your sentence: {}.  It should be spelled
- 'every day', with a space in between when it is an adverb. Please check your sentence carefully and add a space between 
-'every' and 'day' if necessary.""", 1)
+error_msgs['everyday_adv_rbst'] = ("""<strong>⇒</strong> You have used 'everyday' as an adverb in your sentence: {}.  It should be spelled 
+'every day', with a space in between when it does not modify a noun (e.g. 'an everyday affair'). Please check your sentence carefully and add 
+a space between 'every' and 'day' if necessary.""", 1)
 
-error_msgs['hdn_bnp_c_rbst'] = ("""<strong>⇒</strong> This sentence has a singular noun without an article, determiner or possessive 
-before it: {}. Please check your sentence carefully and add an article, determiner or possessive before the singular 
-noun if necessary.""", 1)
+error_msgs['hdn_bnp_c_rbst'] = ("""<strong>⇒</strong> This sentence has a singular noun without an article ('a', 'an', 'the'), determiner 
+(e.g. 'each', 'this') or possessive (e.g. 'my', 'her') before it: {}. Please check your sentence carefully and add an article, determiner 
+or possessive before the singular noun if necessary.""", 1)
 
-error_msgs['mal_det_pl_le'] = ("""<strong>⇒</strong> This sentence has a singular noun without an article, determiner or possessive 
-before it: {}. Please check your sentence carefully and add an article, determiner or possessive before the singular 
-noun or make the singular noun plural if necessary.""", 0.5)
+error_msgs['mal_det_pl_le'] = ("""<strong>⇒</strong> This sentence has a singular noun without an article ('a', 'an', 'the'),  determiner 
+(e.g. 'each', 'this') or possessive (e.g. 'my', 'her') before it: {}. Please check your sentence carefully and add an article, determiner 
+or possessive before the singular noun or make the singular noun plural if necessary.""", 0.5)
 
 error_msgs['n_pl-mass_olr_rbst'] = ("""<strong>⇒</strong> This sentence contains the wrong form of the countable/uncountable noun:
  {}. Please check the noun and remove the plural marking from the uncountable noun if necessary.""", 1)
 
-error_msgs['non_third_sg_fin_v_rbst'] = ("""<strong>⇒</strong> This sentence may have a verb which does not agree in person and 
-number with its subject: {}. Please check the sentence and ensure that the verb agrees with its subject.""", 1)
+error_msgs['non_third_sg_fin_v_rbst'] = ("""<strong>⇒</strong> This sentence may have a verb which does not agree in person 
+(e.g. 'I', 'you', 's/he') and number (singular/plural) with its subject: {}. Please check the sentence and ensure that the verb 
+agrees with its subject.""", 1)
 
 error_msgs['num_det_2_rbst'] = ("""<strong>⇒</strong> You may have used the singular form of a noun with a determiner for plural 
 nouns: {}. Please check the determiner and the noun and ensure that they agree in number if necessary.""", 1)
 
-error_msgs['of_poss_stutter_rbst'] = ("""<strong>⇒</strong> You may have repeated a preposition in your sentence: {}. Please
- check the sentence and remove one of the prepositions if necessary. """, 1)
+error_msgs['of_poss_stutter_rbst'] = ("""<strong>⇒</strong> You may have repeated a preposition (e.g. 'of') in your sentence: {}. Please 
+check the sentence and remove one of the prepositions if necessary.""", 1)
 
 error_msgs['only_adv1_rbst'] = ("""<strong>⇒</strong> 'Only' may be in the wrong position in your sentence: {}. 
 Please check the sentence and move 'only' to another position if necessary. """, 0.5)
@@ -238,13 +239,79 @@ error_msgs['such_a_det_rbst'] = ("""<strong>⇒</strong> You have used 'such' be
 sentence: {} when there should be an article, 'a' or 'an' in between them.  Please read your sentence 
 carefully and insert an article after 'such' if necessary.""", 1)
 
+
+error_msgs['be_are_have_rbst'] = ("""<strong>⇒</strong> In this sentence, you have used the passive verb phrase 
+'is/are + verb-ed': {}.  Please check whether you intended to use 'has/have + verb-ed' instead.""", 1)
+
+error_msgs['be_is_has_rbst'] = ("""<strong>⇒</strong> In this sentence, you have used the passive verb phrase 
+'is/are + verb-ed': {}.  Please check whether you intended to use 'has/have + verb-ed' instead.""", 1)
+
+error_msgs['be_np_are_rbst'] = ("""<strong>⇒</strong> This sentence may have a verb which does not agree in person 
+(e.g. 'I', 'you', 's/he') and number (singular/plural) with its subject: {}. Please check the sentence and ensure that 
+the verb agrees with its subject.""", 0.5)
+
+error_msgs['be_np_is_rbst'] = ("""<strong>⇒</strong> This sentence may have a verb which does not agree in person 
+(e.g. 'I', 'you', 's/he') and number (singular/plural) with its subject: {}. Please check the sentence and ensure that 
+the verb agrees with its subject.""", 0.5)
+
+error_msgs['cl-cl_runon-cma_c_rbst'] = ("""<strong>⇒</strong> This sentence appears to have a comma separating two 
+independent clauses. Please check the sentence and consider using a peroid/full-stop, a semi-colon or an appropriate 
+conjunction instead.""", 0.5)
+
+error_msgs['d_-_poss-its-mal_le'] = ("""<strong>⇒</strong> This sentence appears to have the wrong form of a possessive, such 
+as 'its', 'her', 'his' and 'their': {}.  Please check the sentence and change the form of the possessive if necessary.""", 1)
+
+error_msgs['d_-_sg-a-mal_le'] = ("""<strong>⇒</strong> You have used the wrong form of the indefinite article “a/an”: {}. 
+Please check the sentence and change the indefinite article if necessary.""", 1)
+
+error_msgs['d_-_sg-an-mal_le'] = ("""<strong>⇒</strong> You have used the wrong form of the indefinite article “a/an”: {}. 
+Please check the sentence and change the indefinite article if necessary.""", 1)
+
+error_msgs['d_-_the-mal_le'] = ("""<strong>⇒</strong> There may be a problem with the use or omission of the definite 
+article 'the' in this sentence. Please check your sentence and remove or insert a 'the' if necessary.""", 1)
+
+error_msgs['mal_va_does_le'] = ("""<strong>⇒</strong> This sentence may have a verb which does not agree in person 
+(e.g. 'I', 'you', 's/he') and number (singular/plural) with its subject: {}. Please check the sentence and ensure that 
+the verb agrees with its subject.""", 1)
+
+error_msgs['mal_va_has_le'] = ("""<strong>⇒</strong> This sentence may have a verb which does not agree in person 
+(e.g. 'I', 'you', 's/he') and number (singular/plural) with its subject: {}. Please check the sentence and ensure that 
+the verb agrees with its subject.""", 1)
+
+error_msgs['mal_va_have_fin_le'] = ("""<strong>⇒</strong> This sentence may have a verb which does not agree in person 
+(e.g. 'I', 'you', 's/he') and number (singular/plural) with its subject: {}. Please check the sentence and ensure that 
+the verb agrees with its subject.""", 1)
+
+error_msgs['mal_vc_prd_are_le'] = ("""<strong>⇒</strong> You may have used the verb 'are' incorrectly in the sentence: {}.  
+Please check your sentence and change the form of the verb if necessary.""", 1)
+
+error_msgs['mal_vc_prd_be_le'] = ("""<strong>⇒</strong> You may have used the verb 'be' incorrectly in the sentence: {}. 
+ Please check your sentence and change the form of the verb if necessary.""", 1)
+
+error_msgs['mal_vc_prd_been_le'] = ("""<strong>⇒</strong> You may have used the verb 'been' incorrectly in the sentence: {}. 
+Please check your sentence and change the form of the verb if necessary.""", 1)
+
+error_msgs['mal_vc_prd_is_le'] = ("""<strong>⇒</strong> You may have used the verb 'is' incorrectly in the sentence: {}.  
+Please check your sentence and change the form of the verb if necessary.""", 1)
+
+error_msgs['mal_vc_there_are_le'] = ("""<strong>⇒</strong> This sentence may have a verb after 'there' which does not agree in 
+person (e.g. 'I', 'you', 's/he') and number (singular/plural) with the noun that comes after it: {}. Please check the sentence 
+and ensure that the verb agrees with noun after it.""", 1)
+
+error_msgs['mal_vc_there_is_le'] = ("""<strong>⇒</strong> This sentence may have a verb after 'there' which does not agree in 
+person (e.g. 'I', 'you', 's/he') and number (singular/plural) with the noun that comes after it: {}. Please check the sentence 
+and ensure that the verb agrees with noun after it.""", 1)
+
+error_msgs['much_a1_rbst'] = ("""<strong>⇒</strong> This sentence may have a determiner, such as 'much' or 'many', that should 
+not be used with the countable/uncountable after it: {}. Please check the sentence and change the determiner if necessary.""", 1)
+
 # error_msgs[''] = (""" """, )
 
 
 
 # Errors giving a generic message
 # other tags for this generic message: think_np_prdp_rbst, vp_sbrd-prd-aj_rbst, v-v_crd-fin-ncj_c_rbst, n-hdn_cpd-pl_rbst
-# n-n_crd-im_c_rbst, np-np_crd-im_c_rbst, subjh_bse_rbst
+# n-n_crd-im_c_rbst, np-np_crd-im_c_rbst, subjh_bse_rbst, cl_cnj-frg_rbst, cl-cl_crd-im_c_rbst, either_det_rbst
 error_msgs['NoParse'] = ("""<strong>⇒</strong> The system indicates that this sentence may be problematic but cannot specify the error/s. 
 Please read the sentence carefully to check whether there are any errors, and correct them.""", 0.5)
 
